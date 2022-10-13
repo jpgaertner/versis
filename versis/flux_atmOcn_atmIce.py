@@ -1,9 +1,12 @@
 import os
 import netCDF4
+import veros.tools
 import numpy as np
+from veros.core.operators import update, at
+import matplotlib.pyplot as plt
+
 import versis.constants as ct
 from versis.utilities import *
-import matplotlib.pyplot as plt
 
 
 def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
@@ -316,8 +319,9 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     return (sen, lat, lwup, evap, taux, tauy, tref, qref, duu10n)
 
 
-def main(itime):
+def main(state,itime):
 
+    # read netcdf files
     def read_forcing(var, file):
         with netCDF4.Dataset(file) as infile:
             return np.squeeze(infile[var][:].T)
@@ -338,14 +342,15 @@ def main(itime):
     # Sigma coefficients hyam(i) & hybm(i) are given on
     #   L1 (TOA) - L137(8) (near-surface) model levels
     PATH = '/Users/jgaertne/Documents/forcing data/'
-    input_era5_ml = PATH + './era5_198x_ml_4x4deg_monthly_mean.nc'
+    DATA_ML = './era5_198x_ml_4x4deg_monthly_mean.nc'
+    DATA_SFC = './era5_198x_sfc_4x4deg_monthly_mean.nc'
+    input_era5_ml = PATH + DATA_ML
     longitude = read_forcing('longitude', input_era5_ml)
     latitude = read_forcing('latitude', input_era5_ml)
     hyai = read_forcing('hyai', input_era5_ml)[-3:]
     hybi = read_forcing('hybi', input_era5_ml)[-3:]
     hyam = read_forcing('hyam', input_era5_ml)[-2:]   # L136-L137
     hybm = read_forcing('hybm', input_era5_ml)[-2:]   # L136-L137
-
     lnsp = read_forcing('lnsp', input_era5_ml)[..., 0, itime]
     ubot = read_forcing('u', input_era5_ml)[..., 1, itime]   # L136
     vbot = read_forcing('v', input_era5_ml)[..., 1, itime]   # L136
@@ -353,27 +358,27 @@ def main(itime):
     t = read_forcing('t', input_era5_ml)[..., 1:, itime]     # L136-L137
     qbot = q[..., 0]   # L136
     tbot = t[..., 0]   # L136
-
-    input_era5_sfc = PATH + './era5_198x_sfc_4x4deg_monthly_mean.nc'
+    input_era5_sfc = PATH + DATA_SFC
     lsm = read_forcing('lsm', input_era5_sfc)[..., itime]
     siconc = read_forcing('siconc', input_era5_sfc)[..., itime]
     sst = read_forcing('sst', input_era5_sfc)[..., itime]
     tcc = read_forcing('tcc', input_era5_sfc)[..., itime]
 
-    input_oras5 = './oras5/'
-    # (degC) --> (K)
-    ts = read_forcing('votemper',
-                      f'{input_oras5}'
-                      'votemper_control_monthly_highres_3D_200001_'
-                      'CONS_v0.1_regrided_4x4deg.nc')[..., 0] + 273.15
-    us = read_forcing('vozocrtx',
-                      f'{input_oras5}'
-                      'vozocrtx_control_monthly_highres_3D_200001_'
-                      'CONS_v0.1_regrided_4x4deg.nc')[..., 0]
-    vs = read_forcing('vomecrty',
-                      f'{input_oras5}'
-                      'vomecrty_control_monthly_highres_3D_200001_'
-                      'CONS_v0.1_regrided_4x4deg.nc')[..., 0]
+    # veros and forcing grid
+    vs = state.variables
+    t_grid = (vs.xt[2:-2], vs.yt[2:-2])
+    xt_forc = np.array(netCDF4.Dataset(PATH + DATA_ML)['longitude'])
+    yt_forc = np.array(netCDF4.Dataset(PATH + DATA_ML)['latitude'][::-1])
+    forc_grid = (xt_forc, yt_forc)
+
+    # interpolate veros variables to forcing grid
+    def interpolate(var):
+        return veros.tools.interpolate(t_grid, var, forc_grid)
+
+    # copy ocean temperature and velocity
+    ts = interpolate(vs.temp[2:-2,2:-2,-1,vs.tau])
+    us = interpolate(vs.u[2:-2,2:-2,-1,vs.tau])
+    vs = interpolate(vs.v[2:-2,2:-2,-1,vs.tau])
 
     sp = np.exp(lnsp)
     ph = get_press_levs(sp, hyai, hybi)
@@ -390,9 +395,9 @@ def main(itime):
     mask_ice = np.zeros(siconc.shape)
     mask_ocn = np.zeros(lsm.shape)
 
-    ts[mask_nan] = 0
-    us[mask_nan] = 0
-    vs[mask_nan] = 0
+    ts = update(ts, at[mask_nan], 0)
+    us = update(us, at[mask_nan], 0)
+    vs = update(vs, at[mask_nan], 0)
 
     mask_ice[siconc > 0.] = 1
     mask_ocn[lsm == 0.] = 1
