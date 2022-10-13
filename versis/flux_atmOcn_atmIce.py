@@ -1,7 +1,7 @@
 import os
 import netCDF4
 import veros.tools
-import numpy as np
+from veros.core.operators import numpy as npx
 from veros.core.operators import update, at
 import matplotlib.pyplot as plt
 
@@ -41,7 +41,7 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
         - https://svn-ccsm-release.cgd.ucar.edu/model_versions/cesm1_0_5/models/csm_share/shr/shr_flux_mod.F90
     """
 
-    vmag = np.maximum(ct.UMIN_I, np.sqrt((ubot[...])**2 + (vbot[...])**2))
+    vmag = npx.maximum(ct.UMIN_I, npx.sqrt((ubot[...])**2 + (vbot[...])**2))
 
     # virtual potential temperature (K)
     thvbot = thbot[...] * (1.0 + ct.ZVIR * qbot[...])
@@ -55,14 +55,14 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
     # specific humidity diff (kg/kg)
     delq = qbot[...] - ssq[...]
 
-    alz = np.log(zbot[...] / ct.ZREF)
+    alz = npx.log(zbot[...] / ct.ZREF)
     cp = ct.CPDAIR * (1.0 + ct.CPVIR * ssq[...])
     ct.LTHEAT = ct.LATICE + ct.LATVAP
 
     # First estimate of Z/L and ustar, tstar and qstar
 
     # neutral coefficients, z/L = 0.0
-    rdn = ct.KARMAN / np.log(ct.ZREF / ct.ZZSICE)
+    rdn = ct.KARMAN / npx.log(ct.ZREF / ct.ZZSICE)
     rhn = rdn
     ren = rdn
 
@@ -74,10 +74,10 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thvbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = np.minimum(np.abs(hol[...]), 10.0) * np.sign(hol[...])
-    stable = 0.5 + 0.5 * np.sign(hol[...])
-    xsq = np.maximum(np.sqrt(np.abs(1.0 - 16.0 * hol[...])), 1.0)
-    xqq = np.sqrt(xsq[...])
+    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
+    stable = 0.5 + 0.5 * npx.sign(hol[...])
+    xsq = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
+    xqq = npx.sqrt(xsq[...])
     psimh = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psimhu(xqq[...])
     psixh = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
 
@@ -97,10 +97,10 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thvbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = np.minimum(np.abs(hol[...]), 10.0) * np.sign(hol[...])
-    stable[...] = 0.5 + 0.5 * np.sign(hol[...])
-    xsq[...] = np.maximum(np.sqrt(np.abs(1.0 - 16.0 * hol[...])), 1.0)
-    xqq[...] = np.sqrt(xsq[...])
+    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
+    stable[...] = 0.5 + 0.5 * npx.sign(hol[...])
+    xsq[...] = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
+    xqq[...] = npx.sqrt(xsq[...])
     psimh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psimhu(xqq[...])
     psixh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
 
@@ -139,11 +139,11 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
     bh = ct.KARMAN / rh[...]
 
     # interpolation factor for stable and unstable cases
-    ln0 = np.log(1.0 + (ct.ZTREF / zbot[...]) * (np.exp(bn) - 1.0))
-    ln3 = np.log(1.0 + (ct.ZTREF / zbot[...]) * (np.exp(bn - bh[...]) - 1.0))
+    ln0 = npx.log(1.0 + (ct.ZTREF / zbot[...]) * (npx.exp(bn) - 1.0))
+    ln3 = npx.log(1.0 + (ct.ZTREF / zbot[...]) * (npx.exp(bn - bh[...]) - 1.0))
     fac = (ln0[...] - ct.ZTREF/zbot[...] * (bn - bh[...])) / bh[...] * stable[...]\
         + (ln0[...] - ln3[...]) / bh[...] * (1.0 - stable[...])
-    fac = np.minimum(np.maximum(fac, 0.0), 1.0)
+    fac = npx.minimum(npx.maximum(fac, 0.0), 1.0)
 
     # actual interpolation
     tref = (ts[...] + (tbot[...] - ts[...]) * fac[...]) * mask[...]
@@ -192,9 +192,9 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
         - https://svn-ccsm-release.cgd.ucar.edu/model_versions/cesm1_0_5/models/csm_share/shr/shr_flux_mod.F90
     """
 
-    al2 = np.log(ct.ZREF / ct.ZTREF)
+    al2 = npx.log(ct.ZREF / ct.ZTREF)
 
-    vmag = np.maximum(ct.UMIN_O, np.sqrt((ubot[...] - us[...])**2
+    vmag = npx.maximum(ct.UMIN_O, npx.sqrt((ubot[...] - us[...])**2
                                          + (vbot[...] - vs[...])**2))
 
     # sea surface humidity (kg/kg)
@@ -206,14 +206,14 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     # specific humidity diff. (kg/kg)
     delq = qbot[...] - ssq[...]
 
-    alz = np.log(zbot[...] / ct.ZREF)
+    alz = npx.log(zbot[...] / ct.ZREF)
     cp = ct.CPDAIR * (1.0 + ct.CPVIR * ssq[...])
 
     # first estimate of Z/L and ustar, tstar and qstar
 
     # neutral coefficients, z/L = 0.0
-    stable = 0.5 + 0.5 * np.sign(delt[...])
-    rdn = np.sqrt(cdn(vmag[...]))
+    stable = 0.5 + 0.5 * npx.sign(delt[...])
+    rdn = npx.sqrt(cdn(vmag[...]))
     rhn = (1.0 - stable) * 0.0327 + stable * 0.018
     ren = 0.0346
 
@@ -225,10 +225,10 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = np.minimum(np.abs(hol[...]), 10.0) * np.sign(hol[...])
-    stable = 0.5 + 0.5 * np.sign(hol[...])
-    xsq = np.maximum(np.sqrt(np.abs(1.0 - 16.0 * hol[...])), 1.0)
-    xqq = np.sqrt(xsq[...])
+    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
+    stable = 0.5 + 0.5 * npx.sign(hol[...])
+    xsq = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
+    xqq = npx.sqrt(xsq[...])
     psimh = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psimhu(xqq[...])
     psixh = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
 
@@ -237,7 +237,7 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     u10n = vmag[...] * rd[...] / rdn[...]
 
     # update transfer coeffs at 10m and neutral stability
-    rdn = np.sqrt(cdn(u10n[...]))
+    rdn = npx.sqrt(cdn(u10n[...]))
     ren = 0.0346
     rhn = (1.0 - stable[...]) * 0.0327 + stable[...] * 0.018
 
@@ -257,10 +257,10 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = np.minimum(np.abs(hol[...]), 10.0) * np.sign(hol[...])
-    stable[...] = 0.5 + 0.5 * np.sign(hol[...])
-    xsq[...] = np.maximum(np.sqrt(np.abs(1.0 - 16.0 * hol[...])), 1.0)
-    xqq[...] = np.sqrt(xsq[...])
+    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
+    stable[...] = 0.5 + 0.5 * npx.sign(hol[...])
+    xsq[...] = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
+    xqq[...] = npx.sqrt(xsq[...])
     psimh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psimhu(xqq[...])
     psixh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
 
@@ -269,7 +269,7 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     u10n = vmag[...] * rd[...] / rdn[...]
 
     # update transfer coeffs at 10m and neutral stability
-    rdn[...] = np.sqrt(cdn(u10n[...]))
+    rdn[...] = npx.sqrt(cdn(u10n[...]))
     ren = 0.0346
     rhn[...] = (1.0 - stable[...]) * 0.0327 + stable[...] * 0.018
 
@@ -302,8 +302,8 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     # compute diagnositcs: 2m ref T & Q, 10m wind speed squared
 
     hol[...] = hol[...] * ct.ZTREF / zbot[...]
-    xsq = np.maximum(1.0, np.sqrt(np.abs(1.0 - 16.0 * hol[...])))
-    xqq = np.sqrt(xsq)
+    xsq = npx.maximum(1.0, npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])))
+    xqq = npx.sqrt(xsq)
     psix2 = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
     fac = (rh[...] / ct.KARMAN) * (alz[...] + al2 - psixh[...] + psix2[...])
     tref = thbot[...] - delt[...] * fac[...]
@@ -324,7 +324,7 @@ def main(state,itime):
     # read netcdf files
     def read_forcing(var, file):
         with netCDF4.Dataset(file) as infile:
-            return np.squeeze(infile[var][:].T)
+            return npx.squeeze(infile[var][:].T)
 
     # def plot(ds, fname):
     #     plt.figure(figsize=(10, 5))
@@ -367,8 +367,8 @@ def main(state,itime):
     # veros and forcing grid
     vs = state.variables
     t_grid = (vs.xt[2:-2], vs.yt[2:-2])
-    xt_forc = np.array(netCDF4.Dataset(PATH + DATA_ML)['longitude'])
-    yt_forc = np.array(netCDF4.Dataset(PATH + DATA_ML)['latitude'][::-1])
+    xt_forc = npx.array(netCDF4.Dataset(PATH + DATA_ML)['longitude'])
+    yt_forc = npx.array(netCDF4.Dataset(PATH + DATA_ML)['latitude'][::-1])
     forc_grid = (xt_forc, yt_forc)
 
     # interpolate veros variables to forcing grid
@@ -380,7 +380,7 @@ def main(state,itime):
     us = interpolate(vs.u[2:-2,2:-2,-1,vs.tau])
     vs = interpolate(vs.v[2:-2,2:-2,-1,vs.tau])
 
-    sp = np.exp(lnsp)
+    sp = npx.exp(lnsp)
     ph = get_press_levs(sp, hyai, hybi)
     pf = get_press_levs(sp, hyam, hybm)
     zbot = compute_z_level(t, q, ph)   # L136
@@ -391,9 +391,9 @@ def main(state,itime):
     # potential temperature
     thbot = (tbot[...] * (ct.P0 / pf[:, :, 0])**ct.CAPPA)    # L136
 
-    mask_nan = np.isnan(ts)
-    mask_ice = np.zeros(siconc.shape)
-    mask_ocn = np.zeros(lsm.shape)
+    mask_nan = npx.isnan(ts)
+    mask_ice = npx.zeros(siconc.shape)
+    mask_ocn = npx.zeros(lsm.shape)
 
     ts = update(ts, at[mask_nan], 0)
     us = update(us, at[mask_nan], 0)
