@@ -195,7 +195,7 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     al2 = npx.log(ct.ZREF / ct.ZTREF)
 
     vmag = npx.maximum(ct.UMIN_O, npx.sqrt((ubot[...] - us[...])**2
-                                         + (vbot[...] - vs[...])**2))
+                                        + (vbot[...] - vs[...])**2))
 
     # sea surface humidity (kg/kg)
     ssq = 0.98 * qsat(ts[...]) / rbot[...]
@@ -319,17 +319,30 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     return (sen, lat, lwup, evap, taux, tauy, tref, qref, duu10n)
 
 
-def main(state,itime):
+def main(state):
+    vs = state.variables
 
     # read netcdf files
     def read_forcing(var, file):
         with netCDF4.Dataset(file) as infile:
             return npx.squeeze(infile[var][:].T)
 
-    # def plot(ds, fname):
+    year_in_seconds = 360 * 86400.0
+    (n1, f1), (n2, f2) = veros.tools.get_periodic_interval(vs.time, year_in_seconds, year_in_seconds / 12.0, 12)
+
+    # interpolate the monthly mean data to the value at the current time step
+    def current_value(field):
+        return f1 * field[:, :, n1] + f2 * field[:, :, n2]
+
+    def current_value4d(field):
+        return f1 * field[:, :, :, n1] + f2 * field[:, :, :, n2]
+
+
+    # def plot(ds, fname, cmap=None, vmin=None, vmax=None):
     #     plt.figure(figsize=(10, 5))
     #     cs = plt.pcolor(longitude, latitude,
-    #                     ds.T,
+    #                     ds.T, cmap=cmap,
+    #                     vmin=vmin, vmax=vmax,
     #                     shading='auto')
     #     plt.colorbar(cs)
     #     plt.savefig(f'{output_path}/{fname}.png')
@@ -351,21 +364,22 @@ def main(state,itime):
     hybi = read_forcing('hybi', input_era5_ml)[-3:]
     hyam = read_forcing('hyam', input_era5_ml)[-2:]   # L136-L137
     hybm = read_forcing('hybm', input_era5_ml)[-2:]   # L136-L137
-    lnsp = read_forcing('lnsp', input_era5_ml)[..., 0, itime]
-    ubot = read_forcing('u', input_era5_ml)[..., 1, itime]   # L136
-    vbot = read_forcing('v', input_era5_ml)[..., 1, itime]   # L136
-    q = read_forcing('q', input_era5_ml)[..., 1:, itime]     # L136-L137
-    t = read_forcing('t', input_era5_ml)[..., 1:, itime]     # L136-L137
+    lnsp = current_value(read_forcing('lnsp', input_era5_ml)[..., 0, :])
+    ubot = current_value(read_forcing('u', input_era5_ml)[..., 1, :])  # L136
+    vbot = current_value(read_forcing('v', input_era5_ml)[..., 1, :])  # L136
+    q = current_value4d(read_forcing('q', input_era5_ml)[..., 1:, :])     # L136-L137
+    t = current_value4d(read_forcing('t', input_era5_ml)[..., 1:, :])     # L136-L137
+
     qbot = q[..., 0]   # L136
     tbot = t[..., 0]   # L136
     input_era5_sfc = PATH + DATA_SFC
-    lsm = read_forcing('lsm', input_era5_sfc)[..., itime]
-    siconc = read_forcing('siconc', input_era5_sfc)[..., itime]
-    sst = read_forcing('sst', input_era5_sfc)[..., itime]
-    tcc = read_forcing('tcc', input_era5_sfc)[..., itime]
+    lsm = current_value(read_forcing('lsm', input_era5_sfc)) # land mask (1 if land)
+    sst = current_value(read_forcing('sst', input_era5_sfc))
+    tcc = current_value(read_forcing('tcc', input_era5_sfc))
+    swr_net = current_value(read_forcing('msnswrf', input_era5_sfc))
+    lwr_net = current_value(read_forcing('msnlwrf', input_era5_sfc))
 
     # veros and forcing grid
-    vs = state.variables
     t_grid = (vs.xt[2:-2], vs.yt[2:-2])
     xt_forc = npx.array(netCDF4.Dataset(PATH + DATA_ML)['longitude'])
     yt_forc = npx.array(netCDF4.Dataset(PATH + DATA_ML)['latitude'][::-1])
@@ -392,36 +406,43 @@ def main(state,itime):
     thbot = (tbot[...] * (ct.P0 / pf[:, :, 0])**ct.CAPPA)    # L136
 
     mask_nan = npx.isnan(ts)
-    mask_ice = npx.zeros(siconc.shape)
+    # mask_ice = npx.zeros(vs.Area.shape) #XXX
     mask_ocn = npx.zeros(lsm.shape)
+    mask_ice = npx.zeros(lsm.shape)
 
     ts = update(ts, at[mask_nan], 0)
     us = update(us, at[mask_nan], 0)
     vs = update(vs, at[mask_nan], 0)
 
-    mask_ice[siconc > 0.] = 1
+    # ice mask (1 if there is ice)
+    # mask_ice[vs.Area > 0.] = 1 #XXX
+    mask_ice[lsm > 0.] = 1
+    # ocean mask (1 in the ocean, 0 on land)
     mask_ocn[lsm == 0.] = 1
-    mask_ocn[siconc > 0.] = 0
+    # ocean mask without ice (1 in the ocean, 0 on land and if there is ice)
+    mask_ocn_ice = mask_ocn.copy()
+    # mask_ocn_ice[vs.Area > 0.] = 0 #XXX
+    mask_ocn_ice[lsm > 0.] = 0
 
     atmOcn_fluxes =\
         dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref', 'duu10n'),
-             flux_atmOcn(mask_ocn, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts)))
+             flux_atmOcn(mask_ocn_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts)))
 
     atmIce_fluxes =\
         dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref'),
              flux_atmIce(mask_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts)))
 
     # Net LW radiation flux from sea surface
-    lwnet_ocn = net_lw_ocn(mask_ocn, latitude, qbot, sst, tbot, tcc)
+    lwnet_ocn = net_lw_ocn(mask_ocn_ice, latitude, qbot, sst, tbot, tcc)
 
     # Downward LW radiation flux over sea-ice
     lwdw_ice = dw_lw_ice(mask_ice, tbot, tcc)
 
     # Net surface radiation flux (without short-wave)
-    qnet = lwnet_ocn\
-         + lwdw_ice + atmIce_fluxes['lwup']\
-         + atmIce_fluxes['sen'] + atmOcn_fluxes['sen']\
-         + atmIce_fluxes['lat'] + atmOcn_fluxes['lat']
+    qnet = -(swr_net + lwnet_ocn
+         + lwdw_ice + atmIce_fluxes['lwup']
+         + atmIce_fluxes['sen'] + atmOcn_fluxes['sen']
+         + atmIce_fluxes['lat'] + atmOcn_fluxes['lat'])
 
     dqir_dt, dqh_dt, dqe_dt = dqnetdt(mask_ocn, sp, rbot, sst, ubot, vbot, us, vs)
 
@@ -435,10 +456,11 @@ def main(state,itime):
     # if not os.path.exists(output_path):
     #     os.mkdir(output_path)
 
+    # plot((swr_net + lwr_net) * mask_ocn, 'swr_lwr_net')
     # plot(lwnet_ocn, 'lwnet_ocn')
     # plot(lwdw_ice, 'lwdw_ice')
-    # plot(qnet, 'qnet')
-    # plot(-(dqir_dt + dqh_dt + dqe_dt), 'dqnet_dt')
+    # plot(qnet, 'qnet', cmap='RdBu_r', vmin=-400, vmax=400)
+    # plot(-(dqir_dt + dqh_dt + dqe_dt), 'dqnet_dt', vmin=0, vmax=70)
 
     # for fld in atmIce_fluxes:
     #     plot(atmIce_fluxes[fld] + atmOcn_fluxes[fld], fld)
