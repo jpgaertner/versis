@@ -373,7 +373,8 @@ def main(state):
     qbot = q[..., 0]   # L136
     tbot = t[..., 0]   # L136
     input_era5_sfc = PATH + DATA_SFC
-    lsm = current_value(read_forcing('lsm', input_era5_sfc)) # land mask (1 if land)
+    lsm = current_value(read_forcing('lsm', input_era5_sfc))
+    siconc = current_value(read_forcing('siconc', input_era5_sfc))
     sst = current_value(read_forcing('sst', input_era5_sfc))
     tcc = current_value(read_forcing('tcc', input_era5_sfc))
     swr_net = current_value(read_forcing('msnswrf', input_era5_sfc))
@@ -406,7 +407,7 @@ def main(state):
     thbot = (tbot[...] * (ct.P0 / pf[:, :, 0])**ct.CAPPA)    # L136
 
     mask_nan = npx.isnan(ts)
-    # mask_ice = npx.zeros(vs.Area.shape) #XXX
+    mask_ice = npx.zeros(siconc.shape)
     mask_ocn = npx.zeros(lsm.shape)
     mask_ice = npx.zeros(lsm.shape)
 
@@ -415,14 +416,12 @@ def main(state):
     vs = update(vs, at[mask_nan], 0)
 
     # ice mask (1 if there is ice)
-    # mask_ice[vs.Area > 0.] = 1 #XXX
-    mask_ice[lsm > 0.] = 1
+    mask_ice[siconc > 0.] = 1
     # ocean mask (1 in the ocean, 0 on land)
     mask_ocn[lsm == 0.] = 1
     # ocean mask without ice (1 in the ocean, 0 on land and if there is ice)
     mask_ocn_ice = mask_ocn.copy()
-    # mask_ocn_ice[vs.Area > 0.] = 0 #XXX
-    mask_ocn_ice[lsm > 0.] = 0
+    mask_ocn_ice[siconc > 0.] = 0
 
     atmOcn_fluxes =\
         dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref', 'duu10n'),
