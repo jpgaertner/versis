@@ -409,7 +409,6 @@ def main(state):
     mask_nan = npx.isnan(ts)
     mask_ice = npx.zeros(siconc.shape)
     mask_ocn = npx.zeros(lsm.shape)
-    mask_ice = npx.zeros(lsm.shape)
 
     ts = update(ts, at[mask_nan], 0)
     us = update(us, at[mask_nan], 0)
