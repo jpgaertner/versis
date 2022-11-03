@@ -373,12 +373,11 @@ def main(state):
     qbot = q[..., 0]   # L136
     tbot = t[..., 0]   # L136
     input_era5_sfc = PATH + DATA_SFC
-    lsm = current_value(read_forcing('lsm', input_era5_sfc))
-    siconc = current_value(read_forcing('siconc', input_era5_sfc))
-    sst = current_value(read_forcing('sst', input_era5_sfc))
-    tcc = current_value(read_forcing('tcc', input_era5_sfc))
-    swr_net = current_value(read_forcing('msnswrf', input_era5_sfc))
-    lwr_net = current_value(read_forcing('msnlwrf', input_era5_sfc))
+    lsm = current_value(read_forcing('lsm', input_era5_sfc)) # land sea mask (1 on land, 0 in the ocean)
+    sst = current_value(read_forcing('sst', input_era5_sfc)) # sea surface temperature
+    tcc = current_value(read_forcing('tcc', input_era5_sfc)) # total cloud cover (0 - 1)
+    swr_net = current_value(read_forcing('msnswrf', input_era5_sfc)) # mean surface net shortwave radiation flux
+    lwr_net = current_value(read_forcing('msnlwrf', input_era5_sfc)) # mean surface net longwave radiation flux
 
     # veros and forcing grid
     t_grid = (vs.xt[2:-2], vs.yt[2:-2])
@@ -407,20 +406,22 @@ def main(state):
     thbot = (tbot[...] * (ct.P0 / pf[:, :, 0])**ct.CAPPA)    # L136
 
     mask_nan = npx.isnan(ts)
-    mask_ice = npx.zeros(siconc.shape)
+    # the ice mask is applied in the set_forcing_kernel function in the setup file
+    # here it is set to zero everywhere (i.e. there is no ice)
+    mask_ice = npx.zeros(lsm.shape)
     mask_ocn = npx.zeros(lsm.shape)
 
     ts = update(ts, at[mask_nan], 0)
     us = update(us, at[mask_nan], 0)
     vs = update(vs, at[mask_nan], 0)
 
-    # ice mask (1 if there is ice)
-    mask_ice[siconc > 0.] = 1
+    # ice mask (1 if there is ice) #TODO
+    # mask_ice[siconc > 0.] = 1
     # ocean mask (1 in the ocean, 0 on land)
     mask_ocn[lsm == 0.] = 1
-    # ocean mask without ice (1 in the ocean, 0 on land and if there is ice)
+    # ocean mask without ice (1 in the ocean, 0 on land and if there is ice) #TODO
     mask_ocn_ice = mask_ocn.copy()
-    mask_ocn_ice[siconc > 0.] = 0
+    # mask_ocn_ice[siconc > 0.] = 0
 
     atmOcn_fluxes =\
         dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref', 'duu10n'),
