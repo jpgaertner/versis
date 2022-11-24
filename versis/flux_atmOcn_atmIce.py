@@ -431,13 +431,11 @@ def main(state):
     mask_ocn_ice = mask_ocn.copy()
     # mask_ocn_ice[siconc > 0.] = 0
 
-    atmOcn_fluxes =\
-        dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref', 'duu10n'),
-            flux_atmOcn(mask_ocn_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts)))
+    sen_oc, lat_oc, lwup_oc, evap_oc, taux_oc, tauy_oc, tref_oc, qref_oc, duu10n_oc = \
+        flux_atmOcn(mask_ocn_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts)
 
-    atmIce_fluxes =\
-        dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref'),
-            flux_atmIce(mask_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts)))
+    sen_ice, lat_ice, lwup_ice, evap_ice, taux_ice, tauy_ice, tref_ice, qref_ice = \
+        flux_atmIce(mask_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts)
 
     # Net LW radiation flux from sea surface
     lwnet_ocn = net_lw_ocn(mask_ocn_ice, latitude, qbot, sst, tbot, tcc)
@@ -446,10 +444,10 @@ def main(state):
     lwdw_ice = dw_lw_ice(mask_ice, tbot, tcc)
 
     # Net surface radiation flux
-    qnet = (swr_net + lwnet_ocn
-        + lwdw_ice + atmIce_fluxes['lwup']
-        + atmIce_fluxes['sen'] + atmOcn_fluxes['sen']
-        + atmIce_fluxes['lat'] + atmOcn_fluxes['lat'])
+    # TODO if ice is included, add a mask to lwr_net
+    qnet = (swr_net + lwr_net
+        + sen_ice + sen_oc
+        + lat_ice + lat_oc)
 
     dqir_dt, dqh_dt, dqe_dt = dqnetdt(mask_ocn, sp, rbot, sst, ubot, vbot, us, vs)
 
@@ -457,7 +455,8 @@ def main(state):
 
     qnec = - ( dqir_dt + dqh_dt + dqe_dt )
 
-    return qnet, qnec, swr_dw, swr_net, lwr_dw, lwr_net, lwnet_ocn
+    return qnet, qnec, swr_dw, swr_net, lwr_dw, lwr_net, \
+        sen_ice, sen_oc, lat_ice, lat_oc
 
     # output_path = './output'
     # if not os.path.exists(output_path):
