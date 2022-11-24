@@ -322,10 +322,16 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
 def main(state):
     vs = state.variables
 
-    # read netcdf files
-    def read_forcing(var, file):
+    # read netcdf forcing from file that has no horizontal dimensions
+    def read_forcing_levels(var, file):
         with netCDF4.Dataset(file) as infile:
             return npx.squeeze(infile[var][:].T)
+
+    # read netcdf forcing from file
+    def read_forcing(var, file):
+        with netCDF4.Dataset(file) as infile:
+            # return npx.squeeze(infile[var][:].T)
+            return npx.flip(npx.squeeze(infile[var][:].T),axis=1)
 
     year_in_seconds = 360 * 86400.0
     (n1, f1), (n2, f2) = veros.tools.get_periodic_interval(vs.time, year_in_seconds, year_in_seconds / 12.0, 12)
@@ -358,12 +364,12 @@ def main(state):
     DATA_ML = './era5_198x_ml_4x4deg_monthly_mean.nc'
     DATA_SFC = './era5_198x_sfc_4x4deg_monthly_mean.nc'
     input_era5_ml = PATH + DATA_ML
-    longitude = read_forcing('longitude', input_era5_ml)
-    latitude = read_forcing('latitude', input_era5_ml)
-    hyai = read_forcing('hyai', input_era5_ml)[-3:]
-    hybi = read_forcing('hybi', input_era5_ml)[-3:]
-    hyam = read_forcing('hyam', input_era5_ml)[-2:]   # L136-L137
-    hybm = read_forcing('hybm', input_era5_ml)[-2:]   # L136-L137
+    longitude = read_forcing_levels('longitude', input_era5_ml)
+    latitude = read_forcing_levels('latitude', input_era5_ml)
+    hyai = read_forcing_levels('hyai', input_era5_ml)[-3:]
+    hybi = read_forcing_levels('hybi', input_era5_ml)[-3:]
+    hyam = read_forcing_levels('hyam', input_era5_ml)[-2:]   # L136-L137
+    hybm = read_forcing_levels('hybm', input_era5_ml)[-2:]   # L136-L137
     lnsp = current_value(read_forcing('lnsp', input_era5_ml)[..., 0, :])
     ubot = current_value(read_forcing('u', input_era5_ml)[..., 1, :])  # L136
     vbot = current_value(read_forcing('v', input_era5_ml)[..., 1, :])  # L136
@@ -376,7 +382,9 @@ def main(state):
     lsm = current_value(read_forcing('lsm', input_era5_sfc)) # land sea mask (1 on land, 0 in the ocean)
     sst = current_value(read_forcing('sst', input_era5_sfc)) # sea surface temperature
     tcc = current_value(read_forcing('tcc', input_era5_sfc)) # total cloud cover (0 - 1)
+    swr_dw = current_value(read_forcing('msdwswrf', input_era5_sfc)) # mean surface downward shortwave radiation flux
     swr_net = current_value(read_forcing('msnswrf', input_era5_sfc)) # mean surface net shortwave radiation flux
+    lwr_dw = current_value(read_forcing('msdwlwrf', input_era5_sfc)) # mean surface downward longwave radiation flux
     lwr_net = current_value(read_forcing('msnlwrf', input_era5_sfc)) # mean surface net longwave radiation flux
 
     # veros and forcing grid
@@ -425,11 +433,11 @@ def main(state):
 
     atmOcn_fluxes =\
         dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref', 'duu10n'),
-             flux_atmOcn(mask_ocn_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts)))
+            flux_atmOcn(mask_ocn_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts)))
 
     atmIce_fluxes =\
         dict(zip(('sen', 'lat', 'lwup', 'evap', 'taux', 'tauy', 'tref', 'qref'),
-             flux_atmIce(mask_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts)))
+            flux_atmIce(mask_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts)))
 
     # Net LW radiation flux from sea surface
     lwnet_ocn = net_lw_ocn(mask_ocn_ice, latitude, qbot, sst, tbot, tcc)
@@ -437,11 +445,11 @@ def main(state):
     # Downward LW radiation flux over sea-ice
     lwdw_ice = dw_lw_ice(mask_ice, tbot, tcc)
 
-    # Net surface radiation flux (without short-wave)
-    qnet = -(swr_net + lwnet_ocn
-         + lwdw_ice + atmIce_fluxes['lwup']
-         + atmIce_fluxes['sen'] + atmOcn_fluxes['sen']
-         + atmIce_fluxes['lat'] + atmOcn_fluxes['lat'])
+    # Net surface radiation flux
+    qnet = (swr_net + lwnet_ocn
+        + lwdw_ice + atmIce_fluxes['lwup']
+        + atmIce_fluxes['sen'] + atmOcn_fluxes['sen']
+        + atmIce_fluxes['lat'] + atmOcn_fluxes['lat'])
 
     dqir_dt, dqh_dt, dqe_dt = dqnetdt(mask_ocn, sp, rbot, sst, ubot, vbot, us, vs)
 
@@ -449,13 +457,13 @@ def main(state):
 
     qnec = - ( dqir_dt + dqh_dt + dqe_dt )
 
-    return qnet, qnec
+    return qnet, qnec, swr_dw, swr_net, lwr_dw, lwr_net, lwnet_ocn
 
     # output_path = './output'
     # if not os.path.exists(output_path):
     #     os.mkdir(output_path)
 
-    # plot((swr_net + lwr_net) * mask_ocn, 'swr_lwr_net')
+    # plot((swr_dw + lwr_net) * mask_ocn, 'swr_net')
     # plot(lwnet_ocn, 'lwnet_ocn')
     # plot(lwdw_ice, 'lwdw_ice')
     # plot(qnet, 'qnet', cmap='RdBu_r', vmin=-400, vmax=400)
