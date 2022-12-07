@@ -1,11 +1,13 @@
 from veros.core.operators import numpy as npx
 
 
-def c_point_to_z_point(state,Cfield, noSlip = True):
+def c_point_to_z_point(state, Cfield, noSlip = True):
 
     '''calculates value at z-point by averaging c-point values'''
 
-    sumNorm = state.variables.iceMask + npx.roll(state.variables.iceMask,1,0)
+    vs = state.variables
+
+    sumNorm = vs.iceMask + npx.roll(vs.iceMask,1,0)
     sumNorm = sumNorm + npx.roll(sumNorm,1,1)
     if noSlip:
         sumNorm = npx.where(sumNorm>0,1./sumNorm,0.)

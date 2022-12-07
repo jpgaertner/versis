@@ -12,10 +12,10 @@ def calc_growth(state):
     '''calculate thermodynamic change of ice and snow thickness and ice cover fraction
     due atmospheric and ocean surface forcing'''
 
-    ##### constants and initializations #####
+    vs = state.variables
+    sett = state.settings
 
-    # XXX: salt
-    # ifdef ALLOW_SALT_PLUME ...
+    ##### constants and initializations #####
 
     # heat fluxes in [W/m2]
 
@@ -47,7 +47,7 @@ def calc_growth(state):
     # initialize three dimensional arrays accounting for the thickness categories of the ice
     # (using * 1 ensures that a new array is created for each variable. otherwise they would
     # all point to the same one)
-    ones3d = npx.zeros((*state.variables.iceMask.shape,state.settings.nITC))
+    ones3d = npx.zeros((*vs.iceMask.shape,sett.nITC))
     hIceActual_mult = ones3d * 1
     hSnowActual_mult = ones3d * 1
     F_io_net_mult = ones3d * 1
@@ -64,16 +64,11 @@ def calc_growth(state):
     ##### save ice, snow thicknesses and area prior to thermodynamic #####
     #####   changes and regularize thicknesses                       #####
 
-    # the fields Area, hSnowMean, hIceMean are set to zero where noIce is True
-    # state.variables.Area *= ~noIce
-    # state.variables.hSnowMean *= ~noIce
-    # state.variables.hIceMean *= ~noIce
-
     # store sea ice fields (prior to any thermodynamical changes) when there is ice
-    noIce = ((state.variables.hIceMean == 0) | (state.variables.Area == 0))
-    hIceMeanpreTH = state.variables.hIceMean * ~noIce
-    hSnowMeanpreTH = state.variables.hSnowMean * ~noIce
-    AreapreTH = state.variables.Area * ~noIce
+    noIce = ((vs.hIceMean == 0) | (vs.Area == 0))
+    hIceMeanpreTH = vs.hIceMean * ~noIce
+    hSnowMeanpreTH = vs.hSnowMean * ~noIce
+    AreapreTH = vs.Area * ~noIce
 
     # compute actual ice and snow thickness using the regularized area.
     # ice or snow thickness divided by Area does not work if Area -> 0,
@@ -90,8 +85,8 @@ def calc_growth(state):
     else:
         hSnowActual = npx.where(isIce, hSnowMeanpreTH * recip_regArea, 0)
 
-    if growthTesting:
-        hIceActual = npx.maximum(hIceActual, 0.05)
+    # TODO: growthTesting? what is this for?
+    hIceActual = npx.maximum(hIceActual, 0.05)
 
 
     ##### retrieve the air-sea heat and shortwave radiative fluxes and #####
@@ -99,8 +94,8 @@ def calc_growth(state):
 
     # set shortwave flux in (qswo) and total flux out (F_ao) of the ocean
     # (Qnet and Qsw are both defined as + = upwards)
-    F_ao = state.variables.Qnet
-    qswo = state.variables.Qsw
+    F_ao = vs.Qnet
+    qswo = vs.Qsw
 
     # the fraction of shortwave radiation that is absorbed in the ocean surface layer
     # TODO get this from veros
@@ -118,19 +113,19 @@ def calc_growth(state):
 
     TIce_mult = ones3d * 1
 
-    for l in range(0, state.settings.nITC):
+    for l in range(0, sett.nITC):
         # the nITC ice categories all have the same initial temperature
-        TIce_mult = update(TIce_mult, at[:,:,l], state.variables.TSurf)
+        TIce_mult = update(TIce_mult, at[:,:,l], vs.TSurf)
 
         # set relative thickness of ice and snow categories
-        pFac = (2 * (l + 1) - 1) * state.settings.recip_nITC
+        pFac = (2 * (l + 1) - 1) * sett.recip_nITC
 
         # find actual snow and ice thickness within each category
         hIceActual_mult = update(hIceActual_mult, at[:,:,l], hIceActual * pFac)
         hSnowActual_mult = update(hSnowActual_mult, at[:,:,l], hSnowActual * pFac)
 
     # calculate freezing temperature
-    TempFrz = tempFrz0 + dTempFrz_dS * state.variables.ocSalt + celsius2K
+    TempFrz = tempFrz0 + dTempFrz_dS * vs.ocSalt + celsius2K
 
     # calculate heat fluxes through the ice/ snow and surface temperature
 
@@ -138,7 +133,7 @@ def calc_growth(state):
         print('s4t_v_input:', npx.mean(hIceActual_mult), npx.mean(hSnowActual_mult),
                 npx.mean(TIce_mult), npx.mean(TempFrz))
 
-    for l in range(state.settings.nITC):
+    for l in range(sett.nITC):
         output = solve4temp(state, hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l],
             TIce_mult[:,:,l], TempFrz)
 
@@ -148,7 +143,7 @@ def calc_growth(state):
         F_ia_mult = update(F_ia_mult, at[:,:,l], output[3])
         IcePenetSW_mult = update(IcePenetSW_mult, at[:,:,l], output[4])
         FWsublim_mult = update(FWsublim_mult, at[:,:,l], output[5])
-        F_lh = output[6]
+        F_lh = output[6] #TODO: remove after debugging
         F_lwu = output[7]
         F_sens = output[8]
         q_s = output[9]
@@ -168,44 +163,43 @@ def calc_growth(state):
         tmp = ((AreapreTH > 0) & (npx.mean(TIce_mult,axis=2) < celsius2K))
 
     # snow accumulation rate over ice [m/s]
-    # the snowfall is given in water equivalent, therefore it needs to be muliplied with rhoFresh2rhoSnow
-    SnowAccRateOverIce = state.variables.snowfall
+    # the snowfall is given in water equivalent, therefore it also needs to be muliplied with rhoFresh2rhoSnow
+    SnowAccRateOverIce = vs.snowfall
     if growthTesting:
-        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce +
-                                state.variables.precip * rhoFresh2rhoSnow,
+        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce + vs.precip * rhoFresh2rhoSnow,
                                 SnowAccRateOverIce)
     else:
-        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce + state.variables.precip,
+        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce + vs.precip,
                                 SnowAccRateOverIce) * rhoFresh2rhoSnow
 
     # the precipitation rate over the ice which goes immediately into the
     # ocean (flowing through cracks in the ice). if the temperature is
     # above the freezing point, the precipitation remains wet and runs
     # into the ocean
-    PrecipRateOverIceSurfaceToSea = npx.where(tmp, 0, state.variables.precip)
+    PrecipRateOverIceSurfaceToSea = npx.where(tmp, 0, vs.precip)
 
     # total snow accumulation over ice [m]
-    SnowAccOverIce = SnowAccRateOverIce * AreapreTH * state.settings.deltatTherm
+    SnowAccOverIce = SnowAccRateOverIce * AreapreTH * sett.deltatTherm
 
 
     ##### for every thickness category, record the ice surface #####
     #####  temperature and find the average flux across it     #####
 
     # update surface temperature and fluxes
-    TSurf = npx.sum(TIce_mult, axis=2) * state.settings.recip_nITC
+    TSurf = npx.sum(TIce_mult, axis=2) * sett.recip_nITC
 
     # multplying the fluxes with the area changes them from mean fluxes
     # for the ice part of the cell to mean fluxes for the whole cell
     if growthTesting:
-        F_io_net = npx.sum(F_io_net_mult, axis=2) * state.settings.recip_nITC
-        F_ia_net = npx.sum(F_ia_net_mult, axis=2) * state.settings.recip_nITC
-        IcePenetSW = npx.sum(IcePenetSW_mult, axis=2) * state.settings.recip_nITC
-        # FWsublim = npx.sum(FWsublim_mult, axis=2) * state.settings.recip_nITC
+        F_io_net = npx.sum(F_io_net_mult, axis=2) * sett.recip_nITC
+        F_ia_net = npx.sum(F_ia_net_mult, axis=2) * sett.recip_nITC
+        IcePenetSW = npx.sum(IcePenetSW_mult, axis=2) * sett.recip_nITC
+        # FWsublim = npx.sum(FWsublim_mult, axis=2) * sett.recip_nITC
     else:
-        F_io_net = npx.sum(F_io_net_mult, axis=2) * state.settings.recip_nITC * AreapreTH
-        F_ia_net = npx.sum(F_ia_net_mult, axis=2) * state.settings.recip_nITC * AreapreTH
-        IcePenetSW = npx.sum(IcePenetSW_mult, axis=2) * state.settings.recip_nITC * AreapreTH
-        # FWsublim = npx.sum(FWsublim_mult, axis=2) * state.settings.recip_nITC * AreapreTH
+        F_io_net = npx.sum(F_io_net_mult, axis=2) * sett.recip_nITC * AreapreTH
+        F_ia_net = npx.sum(F_ia_net_mult, axis=2) * sett.recip_nITC * AreapreTH
+        IcePenetSW = npx.sum(IcePenetSW_mult, axis=2) * sett.recip_nITC * AreapreTH
+        # FWsublim = npx.sum(FWsublim_mult, axis=2) * sett.recip_nITC * AreapreTH
 
 
     ##### calculate growth rates of ice and snow #####
@@ -221,7 +215,7 @@ def calc_growth(state):
     PotSnowMeltRateFromSurf = - F_ia_net * qs
 
     # the thickness of snow that can be melted in one time step:
-    PotSnowMeltFromSurf = PotSnowMeltRateFromSurf * state.settings.deltatTherm
+    PotSnowMeltFromSurf = PotSnowMeltRateFromSurf * sett.deltatTherm
 
     # if the heat flux convergence could melt more snow than is actually
     # there, the excess is used to melt ice
@@ -250,16 +244,16 @@ def calc_growth(state):
 
     # the actual snow melt rate due to snow surface heat flux convergence [m/s]
     SnowMeltRateFromSurface = npx.where(allSnowMelted,
-                SnowMeltFromSurface * state.settings.recip_deltatTherm,
+                SnowMeltFromSurface * sett.recip_deltatTherm,
                 PotSnowMeltRateFromSurf)
 
     # the actual surface heat flux convergence used to melt snow [W/m2]
     if growthTesting:
         SurfHeatFluxConvergToSnowMelt = npx.where(allSnowMelted,
-                - hSnowActual * state.settings.recip_deltatTherm / qs, F_ia_net)
+                - hSnowActual * sett.recip_deltatTherm / qs, F_ia_net)
     else:
         SurfHeatFluxConvergToSnowMelt = npx.where(allSnowMelted,
-                - hSnowMeanpreTH * state.settings.recip_deltatTherm / qs, F_ia_net)
+                - hSnowMeanpreTH * sett.recip_deltatTherm / qs, F_ia_net)
 
     # the surface heat flux convergence is reduced by the amount that
     # is used for melting snow:
@@ -285,7 +279,7 @@ def calc_growth(state):
     tmpscal2 = stantonNr * uStarBase * rhoSea * heatCapacity
 
     # the ocean temperature cannot be lower than the freezing temperature
-    surf_theta = npx.maximum(state.variables.theta, TempFrz)
+    surf_theta = npx.maximum(vs.theta, TempFrz)
 
     # mltf = mixed layer turbulence factor (determines how much of the temperature
     # difference is used for heat flux)
@@ -302,9 +296,6 @@ def calc_growth(state):
         IceGrowthRateOpenWater * (1 - AreapreTH) + IceGrowthRateMixedLayer
     dhSnowMean_dt = (SnowAccRateOverIce - SnowMeltRateFromSurface) * AreapreTH
 
-    # XXX: salt
-    # ifdef allow_salt_plume ...
-
     tmpscal0 =  0.5 * recip_hIceActual
 
     # ice growth open water (due to ocean-atmosphere fluxes)
@@ -318,7 +309,7 @@ def calc_growth(state):
                              * (1 - AreapreTH), dArea_oaFlux)
 
     # multiply with lead closing factor
-    dArea_oaFlux = npx.where((tmp & (state.variables.fCori < 0)),
+    dArea_oaFlux = npx.where((tmp & (vs.fCori < 0)),
                                 dArea_oaFlux * recip_h0_south, 
                                 dArea_oaFlux * recip_h0)
 
@@ -342,9 +333,9 @@ def calc_growth(state):
 
     ######  update ice, snow thickness and area #####
 
-    Area = AreapreTH + dArea_dt * state.variables.iceMask * state.settings.deltatTherm
-    hIceMean = hIceMeanpreTH + dhIceMean_dt * state.variables.iceMask * state.settings.deltatTherm
-    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * state.variables.iceMask * state.settings.deltatTherm
+    Area = AreapreTH + dArea_dt * vs.iceMask * sett.deltatTherm
+    hIceMean = hIceMeanpreTH + dhIceMean_dt * vs.iceMask * sett.deltatTherm
+    hSnowMean = hSnowMeanpreTH + dhSnowMean_dt * vs.iceMask * sett.deltatTherm
 
     # set boundaries:
     Area = npx.clip(Area, 0, 1)
@@ -381,7 +372,7 @@ def calc_growth(state):
 
     # the net energy flux out of the ocean [J/m2]
     NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + IcePenetSW)
-                + (1 - AreapreTH) * F_ao) * state.settings.deltatTherm
+                + (1 - AreapreTH) * F_ao) * sett.deltatTherm
 
     # energy taken out of the ocean which is not used for sea ice growth [J].
     # If the net energy flux out of the ocean is balanced by the latent
@@ -390,9 +381,9 @@ def calc_growth(state):
 
     # total heat flux out of the ocean [W/m2]
     if growthTesting:
-        Qnet = state.variables.Qnet
+        Qnet = vs.Qnet
     else:
-        Qnet = ResidualEnergyOutOfOcean * state.settings.recip_deltatTherm
+        Qnet = ResidualEnergyOutOfOcean * sett.recip_deltatTherm
 
     # the freshwater contribution to (from) the ocean due to melting (growing)
     # of ice [m3/m2] (positive for melting)
@@ -402,8 +393,8 @@ def calc_growth(state):
     # of sea ice, then assume the sea ice is completely fresh
     # (if the water is fresh, no salty sea ice can form)
     FreshwaterContribFromIce = - hIceMeanChange * rhoIce2rhoFresh * \
-                npx.where(((state.variables.ocSalt > 0) & (state.variables.ocSalt > saltIce)),
-                            (1 - saltIce/state.variables.ocSalt), 1)
+                npx.where(((vs.ocSalt > 0) & (vs.ocSalt > saltIce)),
+                            (1 - saltIce/vs.ocSalt), 1)
 
     # the variables os_hIceMean and os_hSnowMean are negative ice and snow thicknesses
     # that were calculated in the advection routine. the thicknesses were cut off at zero but
@@ -411,9 +402,9 @@ def calc_growth(state):
 
     # salt flux into the ocean due to ice formation [g/s m2]
     # this is an actual salt flux 
-    tmpscal0 = npx.minimum(saltIce, state.variables.ocSalt)
-    saltflux = (hIceMeanChange + state.variables.os_hIceMean) * tmpscal0 \
-        * state.variables.iceMask * rhoIce * state.settings.recip_deltatTherm
+    tmpscal0 = npx.minimum(saltIce, vs.ocSalt)
+    saltflux = (hIceMeanChange + vs.os_hIceMean) * tmpscal0 \
+        * vs.iceMask * rhoIce * sett.recip_deltatTherm
 
     # the freshwater contribution to the ocean from melting snow [m]
     FreshwaterContribFromSnowMelt = ActualNewTotalSnowMelt / rhoFresh2rhoSnow
@@ -423,12 +414,12 @@ def calc_growth(state):
     # with the ocean surface salinity). if there is a flux of freshwater into the ocean, the salinity has
     # to decrease. but as the ocean model treats the water volume as constant, the adding of freshwater is
     # treated as salt flux out of the ocean
-    EmPmR = state.variables.iceMask *  ((-state.variables.evap - state.variables.precip) * (1 - AreapreTH) \
-        - PrecipRateOverIceSurfaceToSea * AreapreTH - state.variables.runoff - (
+    EmPmR = vs.iceMask *  ((-vs.evap - vs.precip) * (1 - AreapreTH) \
+        - PrecipRateOverIceSurfaceToSea * AreapreTH - vs.runoff - (
         FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) \
-            / state.settings.deltatTherm) * rhoFresh + state.variables.iceMask * (
-        state.variables.os_hIceMean * rhoIce + state.variables.os_hSnowMean * rhoSnow) \
-            * state.settings.recip_deltatTherm
+            / sett.deltatTherm) * rhoFresh + vs.iceMask * (
+        vs.os_hIceMean * rhoIce + vs.os_hSnowMean * rhoSnow) \
+            * sett.recip_deltatTherm
 
     # convert freshwater flux to salt flux and combine virtual and actual salt flux
     forc_salt_surface = EmPmR *  oc_ref_salt / rhoFresh + saltflux
@@ -443,10 +434,11 @@ def calc_growth(state):
                         TSurf = TSurf,
                         saltflux = saltflux,
                         EmPmR = EmPmR,
-                        forc_salt_surface = forc_salt_surface,
+                        # forc_salt_surface = forc_salt_surface,
                         Qsw = Qsw,
                         Qnet = Qnet,
                         SeaIceLoad = SeaIceLoad,
+                        IcePenetSW = IcePenetSW,
                         #TODO remove this after debugging
                         F_lh = F_lh, F_lwu = F_lwu, F_sens = F_sens, q_s = q_s,
                         F_ia_net = F_ia_net, F_io_net = F_io_net, F_oi = F_oi,
@@ -462,4 +454,4 @@ def update_Growth(state):
     '''retrieve thermodynamic change in sea ice fields and update state object'''
 
     Growth = calc_growth(state)
-    state.variables.update(Growth)
+    vs.update(Growth)

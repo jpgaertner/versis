@@ -4,27 +4,25 @@ from veros import veros_kernel
 
 @veros_kernel
 def fill_overlap(state, A):
-    '''
-    fills the overlaps of a field A
-    '''
 
-    olx = state.settings.olx
-    oly = state.settings.oly
-    A = update(A, at[:olx,:], A[-2*olx:-olx,:])
-    A = update(A, at[-olx:,:], A[olx:2*olx,:])
-    A = update(A, at[:,:oly], A[:,-2*oly:-oly])
-    A = update(A, at[:,-oly:], A[:,oly:2*oly])
+    sett = state.settings
+
+    A = update(A, at[:sett.olx,:], A[-2*sett.olx:-sett.olx,:])
+    A = update(A, at[-sett.olx:,:], A[sett.olx:2*sett.olx,:])
+    A = update(A, at[:,:sett.oly], A[:,-2*sett.oly:-sett.oly])
+    A = update(A, at[:,-sett.oly:], A[:,sett.oly:2*sett.oly])
 
     return A
 
 @veros_kernel
 def fill_overlap3d(state, A):
-    olx = state.settings.olx
-    oly = state.settings.oly
-    A = update(A, at[:,:olx,:], A[:,-2*olx:-olx,:])
-    A = update(A, at[:,-olx:,:], A[:,olx:2*olx,:])
-    A = update(A, at[:,:,:oly], A[:,:,-2*oly:-oly])
-    A = update(A, at[:,:,-oly:], A[:,:,oly:2*oly])
+
+    sett = state.settings
+
+    A = update(A, at[:,:sett.olx,:], A[:,-2*sett.olx:-sett.olx,:])
+    A = update(A, at[:,-sett.olx:,:], A[:,sett.olx:2*sett.olx,:])
+    A = update(A, at[:,:,:sett.oly], A[:,:,-2*sett.oly:-sett.oly])
+    A = update(A, at[:,:,-sett.oly:], A[:,:,sett.oly:2*sett.oly])
 
     return A
 

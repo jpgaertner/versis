@@ -12,28 +12,28 @@ def calc_SurfaceForcing(state):
 
     '''calculate surface forcing due to wind and ocean surface tilt'''
 
+    vs = state.variables
+
     # calculate surface stresses from wind and ice velocities
     tauX, tauY = surface_forcing(state)
 
     # calculate forcing by surface stress
-    WindForcingX = tauX * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
-    WindForcingY = tauY * 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
+    WindForcingX = tauX * 0.5 * (vs.Area + npx.roll(vs.Area,1,0))
+    WindForcingY = tauY * 0.5 * (vs.Area + npx.roll(vs.Area,1,1))
 
     # calculate geopotential anomaly. the surface pressure and sea ice load are
     # used as they affect the sea surface height anomaly
-    phiSurf = gravity * state.variables.ssh_an
+    phiSurf = gravity * vs.ssh_an
     if state.settings.useRealFreshWaterFlux:
-        phiSurf = phiSurf + (state.variables.surfPress \
-                    + state.variables.SeaIceLoad * gravity * seaIceLoadFac
-                             ) * recip_rhoSea
+        phiSurf = phiSurf + (vs.surfPress + vs.SeaIceLoad * gravity * seaIceLoadFac) * recip_rhoSea
     else:
-        phiSurf = phiSurf + state.variables.surfPress * recip_rhoSea
+        phiSurf = phiSurf + vs.surfPress * recip_rhoSea
 
     # add in tilt
-    WindForcingX = WindForcingX - state.variables.SeaIceMassU \
-                    * state.variables.recip_dxC * ( phiSurf - npx.roll(phiSurf,1,0) )
-    WindForcingY = WindForcingY - state.variables.SeaIceMassV \
-                    * state.variables.recip_dyC * ( phiSurf - npx.roll(phiSurf,1,1) )
+    WindForcingX = WindForcingX - vs.SeaIceMassU \
+                    * vs.recip_dxC * ( phiSurf - npx.roll(phiSurf,1,0) )
+    WindForcingY = WindForcingY - vs.SeaIceMassV \
+                    * vs.recip_dyC * ( phiSurf - npx.roll(phiSurf,1,1) )
 
     return KernelOutput(WindForcingX = WindForcingX,
                         WindForcingY = WindForcingY,
@@ -53,10 +53,12 @@ def calc_IceVelocities(state):
 
     '''calculate ice velocities from surface and ocean forcing'''
 
-    if state.settings.useFreedrift:
+    sett = state.settings
+
+    if sett.useFreedrift:
         uIce, vIce = freedrift_solver(state)
 
-    if state.settings.useEVP:
+    if sett.useEVP:
         uIce, vIce = evp_solver(state)
 
     return KernelOutput(uIce = uIce, vIce = vIce)

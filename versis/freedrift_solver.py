@@ -9,18 +9,20 @@ def freedrift_solver(state):
 
     '''calculate ice velocities without taking into account internal ice stress'''
 
+    vs = state.variables
+
     # air-ice stress at c-point
-    tauXIceCenter = 0.5 * (state.variables.WindForcingX \
-                + npx.roll(state.variables.WindForcingX,-1,0))
-    tauYIceCenter = 0.5 * (state.variables.WindForcingY \
-                + npx.roll(state.variables.WindForcingY,-1,1))
+    tauXIceCenter = 0.5 * (vs.WindForcingX \
+                + npx.roll(vs.WindForcingX,-1,0))
+    tauYIceCenter = 0.5 * (vs.WindForcingY \
+                + npx.roll(vs.WindForcingY,-1,1))
 
     # mass of ice per unit area times coriolis factor
-    mIceCor = rhoIce * state.variables.hIceMean * state.variables.fCori
+    mIceCor = rhoIce * vs.hIceMean * vs.fCori
 
     # ocean surface velocity at c-points
-    uOceanCenter = 0.5 * (state.variables.uOcean + npx.roll(state.variables.uOcean,-1,0))
-    vOceanCenter = 0.5 * (state.variables.vOcean + npx.roll(state.variables.vOcean,-1,1))
+    uOceanCenter = 0.5 * (vs.uOcean + npx.roll(vs.uOcean,-1,0))
+    vOceanCenter = 0.5 * (vs.vOcean + npx.roll(vs.vOcean,-1,1))
 
     # right hand side of the free drift equation
     rhsX = - tauXIceCenter - mIceCor * vOceanCenter
@@ -33,7 +35,7 @@ def freedrift_solver(state):
     rhsA = npx.where(where1, npx.arctan2(rhsY,rhsX), 0)
 
     # solve for norm
-    south = (state.variables.fCori < 0)
+    south = (vs.fCori < 0)
     tmp1 = 1 / (npx.where(south, waterIceDrag_south, waterIceDrag) * rhoSea)
     tmp2 = tmp1**2 * mIceCor**2
     tmp3 = tmp1**2 * rhsN**2
@@ -56,7 +58,7 @@ def freedrift_solver(state):
     vIceFD = 0.5 * (npx.roll(vIceCenter,1,1) + vIceCenter)
 
     # apply masks
-    uIceFD = uIceFD * state.variables.iceMaskU
-    vIceFD = vIceFD * state.variables.iceMaskV
+    uIceFD = uIceFD * vs.iceMaskU
+    vIceFD = vIceFD * vs.iceMaskV
 
     return uIceFD, vIceFD

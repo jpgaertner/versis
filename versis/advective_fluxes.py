@@ -19,10 +19,13 @@ def calc_ZonalFlux(state, field, uTrans):
 
     '''calculate the zonal advective flux using the second order flux limiter method'''
 
-    maskLocW = state.variables.iceMaskU * state.variables.maskInU
+    vs = state.variables
+    sett = state.settings
+
+    maskLocW = vs.iceMaskU * vs.maskInU
 
     # CFL number of zonal flow
-    uCFL = npx.abs(state.variables.uIce * state.settings.deltatTherm * state.variables.recip_dxC)
+    uCFL = npx.abs(vs.uIce * sett.deltatTherm * vs.recip_dxC)
 
     # calculate slope ratio Cr
     Rjp = (field[3:,:] - field[2:-1,:]) * maskLocW[3:,:]
@@ -35,7 +38,7 @@ def calc_ZonalFlux(state, field, uTrans):
     Cr = limiter(Cr)
 
     # zonal advective flux for the given field
-    ZonalFlux = npx.zeros_like(state.variables.iceMask)
+    ZonalFlux = npx.zeros_like(vs.iceMask)
     ZonalFlux = update(ZonalFlux, at[2:-1,:], uTrans[2:-1,:] * (
                 field[2:-1,:] + field[1:-2,:]) * 0.5
                 - npx.abs(uTrans[2:-1,:]) * ((1 - Cr)
@@ -49,10 +52,13 @@ def calc_MeridionalFlux(state, field, vTrans):
 
     '''calculate the meridional advective flux using the second order flux limiter method'''
 
-    maskLocS = state.variables.iceMaskV * state.variables.maskInV
+    vs = state.variables
+    sett = state.settings
+
+    maskLocS = vs.iceMaskV * vs.maskInV
 
     # CFL number of meridional flow
-    vCFL = npx.abs(state.variables.vIce * state.settings.deltatTherm * state.variables.recip_dyC)
+    vCFL = npx.abs(vs.vIce * sett.deltatTherm * vs.recip_dyC)
 
     # calculate slope ratio Cr
     Rjp = (field[:,3:] - field[:,2:-1]) * maskLocS[:,3:]
@@ -65,7 +71,7 @@ def calc_MeridionalFlux(state, field, vTrans):
     Cr = limiter(Cr)
 
     # meridional advective flux for the given field
-    MeridionalFlux = npx.zeros_like(state.variables.iceMask)
+    MeridionalFlux = npx.zeros_like(vs.iceMask)
     MeridionalFlux = update(MeridionalFlux, at[:,2:-1], vTrans[:,2:-1] * (
                 field[:,2:-1] + field[:,1:-2]) * 0.5
                 - npx.abs(vTrans[:,2:-1]) * ((1 - Cr)

@@ -16,13 +16,16 @@ def calc_Advection(state, field):
 
     '''calculate change in sea ice field due to advection'''
 
+    vs = state.variables
+    sett = state.settings
+
     # retrieve cell faces
-    xA = state.variables.dyG * state.variables.iceMaskU
-    yA = state.variables.dxG * state.variables.iceMaskV
+    xA = vs.dyG * vs.iceMaskU
+    yA = vs.dxG * vs.iceMaskV
 
     # calculate ice transport
-    uTrans = state.variables.uIce * xA
-    vTrans = state.variables.vIce * yA
+    uTrans = vs.uIce * xA
+    vTrans = vs.vIce * yA
 
     # make local copy of field prior to advective changes
     fieldLoc = field
@@ -31,12 +34,12 @@ def calc_Advection(state, field):
     ZonalFlux = calc_ZonalFlux(state, fieldLoc, uTrans)
 
     # update field according to zonal fluxes
-    if state.settings.extensiveFld:
-        fieldLoc = fieldLoc - state.settings.deltatTherm * state.variables.maskInC \
-            * state.variables.recip_rA * ( npx.roll(ZonalFlux,-1,0) - ZonalFlux )
+    if sett.extensiveFld:
+        fieldLoc = fieldLoc - sett.deltatTherm * vs.maskInC \
+            * vs.recip_rA * ( npx.roll(ZonalFlux,-1,0) - ZonalFlux )
     else:
-        fieldLoc = fieldLoc - state.settings.deltatTherm * state.variables.maskInC \
-            * state.variables.recip_rA * state.variables.recip_hIceMean \
+        fieldLoc = fieldLoc - sett.deltatTherm * vs.maskInC \
+            * vs.recip_rA * vs.recip_hIceMean \
             * (( npx.roll(ZonalFlux,-1,1) - ZonalFlux )
             - ( npx.roll(state.variable.uTrans,-1,0) - state.variable.uTrans )
             * field)
@@ -45,18 +48,18 @@ def calc_Advection(state, field):
     MeridionalFlux = calc_MeridionalFlux(state, fieldLoc, vTrans)
 
     # update field according to meridional fluxes
-    if state.settings.extensiveFld:
-        fieldLoc = fieldLoc - state.settings.deltatTherm * state.variables.maskInC \
-            * state.variables.recip_rA * ( npx.roll(MeridionalFlux,-1,1) - MeridionalFlux )
+    if sett.extensiveFld:
+        fieldLoc = fieldLoc - sett.deltatTherm * vs.maskInC \
+            * vs.recip_rA * ( npx.roll(MeridionalFlux,-1,1) - MeridionalFlux )
     else:
-        fieldLoc = fieldLoc - state.settings.deltatTherm * state.variables.maskInC \
-            * state.variables.recip_rA * state.variables.recip_hIceMean \
+        fieldLoc = fieldLoc - sett.deltatTherm * vs.maskInC \
+            * vs.recip_rA * vs.recip_hIceMean \
             * (( npx.roll(MeridionalFlux,-1,0) - MeridionalFlux )
-            - ( npx.roll(state.variable.vTrans,-1,1) - state.variables.vTrans)
+            - ( npx.roll(state.variable.vTrans,-1,1) - vs.vTrans)
             * field)
 
     # apply mask
-    fieldLoc = fieldLoc * state.variables.iceMask
+    fieldLoc = fieldLoc * vs.iceMask
 
     return fieldLoc
 
@@ -65,9 +68,11 @@ def do_Advections(state):
 
     '''retrieve changes in sea ice fields'''
 
-    hIceMean    = calc_Advection(state, state.variables.hIceMean)
-    hSnowMean   = calc_Advection(state, state.variables.hSnowMean)
-    Area        = calc_Advection(state, state.variables.Area)
+    vs = state.variables
+
+    hIceMean    = calc_Advection(state, vs.hIceMean)
+    hSnowMean   = calc_Advection(state, vs.hSnowMean)
+    Area        = calc_Advection(state, vs.Area)
 
     return KernelOutput(hIceMean = hIceMean, hSnowMean = hSnowMean, Area = Area)
 

@@ -10,22 +10,24 @@ def clean_up_advection(state):
 
     '''clean up overshoots and other pathological cases after advection'''
 
+    vs = state.variables
+
     # case 1: negative values
     # calculate overshoots of ice and snow thickness
-    os_hIceMean = npx.maximum(-state.variables.hIceMean, 0)
-    os_hSnowMean = npx.maximum(-state.variables.hSnowMean, 0)
+    os_hIceMean = npx.maximum(-vs.hIceMean, 0)
+    os_hSnowMean = npx.maximum(-vs.hSnowMean, 0)
 
     # cut off thicknesses and area at zero
-    hIceMean = npx.maximum(state.variables.hIceMean, 0)
-    hSnowMean = npx.maximum(state.variables.hSnowMean, 0)
-    Area = npx.maximum(state.variables.Area, 0)
+    hIceMean = npx.maximum(vs.hIceMean, 0)
+    hSnowMean = npx.maximum(vs.hSnowMean, 0)
+    Area = npx.maximum(vs.Area, 0)
 
     # case 2: very thin ice
     # set thicknesses to zero if the ice thickness is very small
     thinIce = (hIceMean <= si_eps)
     hIceMean *= ~thinIce
     hSnowMean *= ~thinIce
-    TSurf = npx.where(thinIce, celsius2K, state.variables.TSurf)
+    TSurf = npx.where(thinIce, celsius2K, vs.TSurf)
 
     # case 3: area but no ice and snow
     # set area to zero if no ice or snow is present

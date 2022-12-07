@@ -9,8 +9,10 @@ def calc_AreaWS(state):
 
     '''calculate sea ice cover fraction centered around velocity points'''
 
-    AreaW = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,0))
-    AreaS = 0.5 * (state.variables.Area + npx.roll(state.variables.Area,1,1))
+    vs = state.variables
+
+    AreaW = 0.5 * (vs.Area + npx.roll(vs.Area,1,0))
+    AreaS = 0.5 * (vs.Area + npx.roll(vs.Area,1,1))
 
     return KernelOutput(AreaW = AreaW, AreaS = AreaS)
 
@@ -27,8 +29,10 @@ def calc_SeaIceMass(state):
 
     '''calculate mass of the ice-snow system centered around c-, u-, and v-points'''
 
-    SeaIceMassC = rhoIce * state.variables.hIceMean \
-                + rhoSnow * state.variables.hSnowMean
+    vs = state.variables
+
+    SeaIceMassC = rhoIce * vs.hIceMean \
+                + rhoSnow * vs.hSnowMean
     SeaIceMassU = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,0) )
     SeaIceMassV = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,1) )
 
