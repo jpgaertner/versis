@@ -31,9 +31,10 @@ def copy_output(state):
 
     vs = state.variables
 
-    #TODO this is useless as forc_temp_surface gets update in set_forcing_kernel at the beginning
+    # TODO all of this is useless as forc_temp_surface gets updated in set_forcing_kernel at the beginning
     # of the time step. This is only useful if versis is executed at the beginning of the time step.
-    # then add also something to update the shortwave flux arriving at the ocean surface
+    # then also the shortwave flux arriving at the ocean surface should be updated accordingly
+
     # set the surface heat flux to the heat flux that is reduced due to a potential ice cover
     vs.forc_temp_surface = - vs.Qnet / ( heatCapacity * rhoSea )
 
