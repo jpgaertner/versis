@@ -16,7 +16,7 @@ def set_inits(state):
     vs.TSurf = ones2d * 273
 
     # if veros is used, all other variables are either copied in copy_veros_variables,
-    # set in global_4deg (set_forcing), or have 0 as initial value
+    # set in global_4deg (set_forcing_kernel), or have 0 as initial value
     useVeros = True
     if not useVeros:
         vs.dxC = ones2d * st.gridcellWidth
@@ -66,10 +66,10 @@ def set_inits(state):
         state.variables.SeaIceLoad  = ones2d * (rhoIce * state.variables.hIceMean
                                                 + rhoSnow * state.variables.hSnowMean)
         # vs.TIceSnow = npx.ones((*vs.iceMask.shape,st.nITC)) * 273
-        vs.TIceSnow = ones2d * 273
+        vs.TSurf = ones2d * 273
         vs.wSpeed = ones2d * 2
         vs.ocSalt = ones2d * 29
         vs.theta = ones2d * celsius2K - 1.9
         vs.Qnet = ones2d * 252.19888563808655
-        vs.LWDown = ones2d * 80
+        vs.LWdown = ones2d * 80
         vs.ATemp = ones2d * 243
