@@ -74,7 +74,7 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thvbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
+    hol = npx.minimum(npx.abs(hol), 10.0) * npx.sign(hol)
     stable = 0.5 + 0.5 * npx.sign(hol[...])
     xsq = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
     xqq = npx.sqrt(xsq[...])
@@ -97,22 +97,22 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thvbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
-    stable[...] = 0.5 + 0.5 * npx.sign(hol[...])
-    xsq[...] = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
-    xqq[...] = npx.sqrt(xsq[...])
-    psimh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psimhu(xqq[...])
-    psixh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
+    hol = npx.minimum(npx.abs(hol), 10.0) * npx.sign(hol)
+    stable = 0.5 + 0.5 * npx.sign(hol)
+    xsq = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol)), 1.0)
+    xqq = npx.sqrt(xsq)
+    psimh = -5.0 * hol * stable + (1.0 - stable) * psimhu(xqq)
+    psixh = -5.0 * hol * stable + (1.0 - stable) * psixhu(xqq)
 
     # shift all coeffs to measurement height and stability
-    rd[...] = rdn / (1.0 + rdn / ct.KARMAN * (alz[...] - psimh[...]))
-    rh[...] = rhn / (1.0 + rhn / ct.KARMAN * (alz[...] - psixh[...]))
-    re[...] = ren / (1.0 + ren / ct.KARMAN * (alz[...] - psixh[...]))
+    rd = rdn / (1.0 + rdn / ct.KARMAN * (alz - psimh))
+    rh = rhn / (1.0 + rhn / ct.KARMAN * (alz - psixh))
+    re = ren / (1.0 + ren / ct.KARMAN * (alz - psixh))
 
     # update ustar, tstar, qstar using updated, shifted coeffs
-    ustar[...] = rd[...] * vmag[...]
-    tstar[...] = rh[...] * delt[...]
-    qstar[...] = re[...] * delq[...]
+    ustar = rd * vmag
+    tstar = rh * delt
+    qstar = re * delq
 
     # Compute the fluxes
 
@@ -154,7 +154,6 @@ def flux_atmIce(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, ts):
 
 def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     """atm/ocn fluxes calculation
-
     Arguments:
         mask (:obj:`ndarray`): ocn domain mask       0 <=> out of domain
         rbot (:obj:`ndarray`): atm density           (kg/m^3)
@@ -167,7 +166,6 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
         us   (:obj:`ndarray`): ocn u-velocity        (m/s)
         vs   (:obj:`ndarray`): ocn v-velocity        (m/s)
         ts   (:obj:`ndarray`): ocn temperature       (K)
-
     Returns:
         sen  (:obj:`ndarray`): heat flux: sensible    (W/m^2)
         lat  (:obj:`ndarray`): heat flux: latent      (W/m^2)
@@ -175,15 +173,12 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
         evap (:obj:`ndarray`): water flux: evap  ((kg/s)/m^2)
         taux (:obj:`ndarray`): surface stress, zonal      (N)
         tauy (:obj:`ndarray`): surface stress, maridional (N)
-
         tref (:obj:`ndarray`): diag:  2m ref height T     (K)
         qref (:obj:`ndarray`): diag:  2m ref humidity (kg/kg)
         duu10n(:obj:`ndarray`): diag: 10m wind speed squared (m/s)^2
-
         ustar_sv(:obj:`ndarray`): diag: ustar
         re_sv   (:obj:`ndarray`): diag: sqrt of exchange coefficient (water)
         ssq_sv  (:obj:`ndarray`): diag: sea surface humidity  (kg/kg)
-
     Reference:
         - Large, W. G., & Pond, S. (1981). Open Ocean Momentum Flux Measurements in Moderate to Strong Winds,
         Journal of Physical Oceanography, 11(3), pp. 324-336
@@ -195,7 +190,7 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     al2 = npx.log(ct.ZREF / ct.ZTREF)
 
     vmag = npx.maximum(ct.UMIN_O, npx.sqrt((ubot[...] - us[...])**2
-                                        + (vbot[...] - vs[...])**2))
+                                         + (vbot[...] - vs[...])**2))
 
     # sea surface humidity (kg/kg)
     ssq = 0.98 * qsat(ts[...]) / rbot[...]
@@ -225,7 +220,7 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
+    hol = npx.minimum(npx.abs(hol), 10.0) * npx.sign(hol)
     stable = 0.5 + 0.5 * npx.sign(hol[...])
     xsq = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
     xqq = npx.sqrt(xsq[...])
@@ -257,31 +252,31 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     hol = ct.KARMAN * ct.G * zbot[...] *\
         (tstar[...] / thbot[...] + qstar[...]
          / (1.0 / ct.ZVIR + qbot[...])) / ustar[...]**2
-    hol[...] = npx.minimum(npx.abs(hol[...]), 10.0) * npx.sign(hol[...])
-    stable[...] = 0.5 + 0.5 * npx.sign(hol[...])
-    xsq[...] = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])), 1.0)
-    xqq[...] = npx.sqrt(xsq[...])
-    psimh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psimhu(xqq[...])
-    psixh[...] = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
+    hol = npx.minimum(npx.abs(hol), 10.0) * npx.sign(hol)
+    stable = 0.5 + 0.5 * npx.sign(hol)
+    xsq = npx.maximum(npx.sqrt(npx.abs(1.0 - 16.0 * hol)), 1.0)
+    xqq = npx.sqrt(xsq)
+    psimh = -5.0 * hol * stable + (1.0 - stable) * psimhu(xqq)
+    psixh = -5.0 * hol * stable + (1.0 - stable) * psixhu(xqq)
 
     # shift wind speed using old coefficient
-    rd[...] = rdn[...] / (1.0 + rdn[...] / ct.KARMAN * (alz[...] - psimh[...]))
+    rd = rdn / (1.0 + rdn / ct.KARMAN * (alz - psimh))
     u10n = vmag[...] * rd[...] / rdn[...]
 
     # update transfer coeffs at 10m and neutral stability
-    rdn[...] = npx.sqrt(cdn(u10n[...]))
+    rdn = npx.sqrt(cdn(u10n))
     ren = 0.0346
-    rhn[...] = (1.0 - stable[...]) * 0.0327 + stable[...] * 0.018
+    rhn = (1.0 - stable) * 0.0327 + stable * 0.018
 
     # shift all coeffs to measurement height and stability
-    rd[...] = rdn[...] / (1.0 + rdn[...] / ct.KARMAN * (alz[...] - psimh[...]))
-    rh[...] = rhn[...] / (1.0 + rhn[...] / ct.KARMAN * (alz[...] - psixh[...]))
-    re[...] = ren / (1.0 + ren / ct.KARMAN * (alz[...] - psixh[...]))
+    rd = rdn / (1.0 + rdn / ct.KARMAN * (alz - psimh))
+    rh = rhn / (1.0 + rhn / ct.KARMAN * (alz - psixh))
+    re = ren / (1.0 + ren / ct.KARMAN * (alz - psixh))
 
     # update ustar, tstar, qstar using updated, shifted coeffs
-    ustar[...] = rd[...] * vmag[...]
-    tstar[...] = rh[...] * delt[...]
-    qstar[...] = re[...] * delq[...]
+    ustar = rd * vmag
+    tstar = rh * delt
+    qstar = re * delq
 
     # compute the fluxes
 
@@ -301,7 +296,7 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
 
     # compute diagnositcs: 2m ref T & Q, 10m wind speed squared
 
-    hol[...] = hol[...] * ct.ZTREF / zbot[...]
+    hol = hol * ct.ZTREF / zbot
     xsq = npx.maximum(1.0, npx.sqrt(npx.abs(1.0 - 16.0 * hol[...])))
     xqq = npx.sqrt(xsq)
     psix2 = -5.0 * hol[...] * stable[...] + (1.0 - stable[...]) * psixhu(xqq[...])
@@ -309,15 +304,54 @@ def flux_atmOcn(mask, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts):
     tref = thbot[...] - delt[...] * fac[...]
 
     # pot. temp to temp correction
-    tref[...] = (tref[...] - 0.01 * ct.ZTREF) * mask[...]
-    fac[...] = (re[...] / ct.KARMAN) * (alz[...] + al2 - psixh[...] + psix2[...]) * mask[...]
+    tref = (tref - 0.01 * ct.ZTREF) * mask
+    fac = (re / ct.KARMAN) * (alz + al2 - psixh + psix2) * mask
     qref = (qbot[...] - delq[...] * fac[...]) * mask[...]
 
     # 10m wind speed squared
     duu10n = u10n[...] * u10n[...] * mask[...]
 
-    return (sen, lat, lwup, evap, taux, tauy, tref, qref, duu10n)
+    return (sen, lat, lwup, evap, taux, tauy, tref, qref, duu10n, ustar, tstar, qstar)
 
+
+def flux_atmOcnIce(mask, ps, qbot, rbot, ubot, vbot, tbot, us, vs, ts):
+    """Calculates bulk net heat flux
+    Arguments:
+        mask (:obj:`ndarray`): ocn domain mask       0 <=> out of domain
+        ps   (:obj:`ndarray`): surface pressure (Pa)
+        qbot (:obj:`ndarray`): atm specific humidity (kg/kg)
+        rbot (:obj:`ndarray`): atm density at full model level (kg/m^3)
+        tbot (:obj:`ndarray`): temperature at full model level (K)
+        ubot (:obj:`ndarray`): atm u wind            (m/s)
+        vbot (:obj:`ndarray`): atm v wind            (m/s)
+        qbot (:obj:`ndarray`): atm specific humidity (kg/kg)
+        tbot (:obj:`ndarray`): atm T                 (K)
+        us   (:obj:`ndarray`): ocn u-velocity        (m/s)
+        vs   (:obj:`ndarray`): ocn v-velocity        (m/s)
+        ts   (:obj:`ndarray`): surface temperature   (K)
+    Returns:
+        tuple(:obj:`ndarray`, :obj:`ndarray`, :obj:`ndarray`) 
+    Reference:
+        Barnier B., L. Siefridt, P. Marchesiello, (1995):
+        Thermal forcing for a global ocean circulation model
+        using a three-year climatology of ECMWF analyses,
+        Journal of Marine Systems, 6, p. 363-380.
+    """
+
+    vmag = npx.maximum(ct.UMIN_O, npx.sqrt((ubot[...] - us[...])**2
+                                         + (vbot[...] - vs[...])**2))
+
+    # long-wave radiation (IR)
+    qir = -ct.STEBOL * ts[...]**4 * mask[...]
+
+    # sensible heat flux
+    qh = rbot[...] * ct.CPDAIR * ct.CH * vmag[...] * (tbot[...] - ts[...]) * mask[...]
+
+    # latent heat flux
+    qe = -rbot[...] * ct.CE * ct.LATVAP * vmag[...] * (qsat_august_eqn(ps, ts)
+                                                       - qbot[...]) * mask[...]
+
+    return (qir, qh, qe)
 
 def main(state):
     vs = state.variables
@@ -330,7 +364,6 @@ def main(state):
     # read netcdf forcing from file
     def read_forcing(var, file):
         with netCDF4.Dataset(file) as infile:
-            # return npx.squeeze(infile[var][:].T)
             return npx.flip(npx.squeeze(infile[var][:].T),axis=1)
 
     year_in_seconds = 360 * 86400.0
@@ -398,7 +431,7 @@ def main(state):
         return veros.tools.interpolate(t_grid, var, forc_grid)
 
     # copy ocean temperature and velocity
-    ts = interpolate(vs.temp[2:-2,2:-2,-1,vs.tau])
+    ts = interpolate(vs.temp[2:-2,2:-2,-1,vs.tau])# + 273.15
     us = interpolate(vs.u[2:-2,2:-2,-1,vs.tau])
     vs = interpolate(vs.v[2:-2,2:-2,-1,vs.tau])
 
@@ -431,7 +464,7 @@ def main(state):
     mask_ocn_ice = mask_ocn.copy()
     # mask_ocn_ice[siconc > 0.] = 0
 
-    sen_oc, lat_oc, lwup_oc, evap_oc, taux_oc, tauy_oc, tref_oc, qref_oc, duu10n_oc = \
+    sen_oc, lat_oc, lwup_oc, evap_oc, taux_oc, tauy_oc, tref_oc, qref_oc, duu10n_oc, ustar, tstar, qstar = \
         flux_atmOcn(mask_ocn_ice, rbot, zbot, ubot, vbot, qbot, tbot, thbot, us, vs, ts)
 
     sen_ice, lat_ice, lwup_ice, evap_ice, taux_ice, tauy_ice, tref_ice, qref_ice = \
@@ -445,9 +478,12 @@ def main(state):
 
     # Net surface radiation flux
     # TODO if ice is included, add a mask to lwr_net
-    qnet = (swr_net + lwr_net
-        + sen_ice + sen_oc
-        + lat_ice + lat_oc)
+    # qnet = (swr_net + lwr_net
+    #     + sen_ice + sen_oc
+    #     + lat_ice + lat_oc)
+
+    qnet = (swr_net + lwr_net)
+
 
     dqir_dt, dqh_dt, dqe_dt = dqnetdt(mask_ocn, sp, rbot, sst, ubot, vbot, us, vs)
 
@@ -455,8 +491,9 @@ def main(state):
 
     qnec = - ( dqir_dt + dqh_dt + dqe_dt )
 
-    return qnet, qnec, swr_dw, swr_net, lwr_dw, lwr_net, \
-        sen_ice, sen_oc, lat_ice, lat_oc
+    return qnet, qnec
+    # return qnet, qnec, swr_dw, swr_net, lwr_dw, lwr_net, \
+    #     sen_ice, sen_oc, lat_ice, lat_oc, ustar, tstar, qstar
 
     # output_path = './output'
     # if not os.path.exists(output_path):
