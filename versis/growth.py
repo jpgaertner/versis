@@ -455,4 +455,4 @@ def update_Growth(state):
     '''retrieve thermodynamic change in sea ice fields and update state object'''
 
     Growth = calc_growth(state)
-    vs.update(Growth)
+    state.variables.update(Growth)
