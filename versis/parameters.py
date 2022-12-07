@@ -71,7 +71,7 @@ saltIce = 0         # reference salinity of sea ice
 oc_ref_salt = 34.7  # reference salinity of the ocean
 
 # boundaries for longwave radiation and temperature
-minLwDown = 60  # minimum downward longwave radiation
+minLWdown = 60  # minimum downward longwave radiation
 maxTIce = 30    # maximum ice temperature
 minTIce = -50   # minimum ice temperature
 minTAir = -50   # minimum air temperature
