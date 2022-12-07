@@ -15,34 +15,35 @@ def calc_growth(state):
     vs = state.variables
     sett = state.settings
 
+
     ##### constants and initializations #####
 
     # heat fluxes in [W/m2]
 
+    # F_ia_net
     # net heat flux divergence at the
     # sea ice/snow surface including sea ice conductive fluxes and
     # atmospheric fluxes
     # = 0: surface heat loss is balanced by upward conductive fluxes
     # < 0: net heat flux convergence at the ice/ snow surface
-    # F_ia_net
 
+    # F_ia_net_before_snow
     # the net heat flux divergence at the sea ice/snow
     # surface before snow is melted with any convergence
     # < 0: some snow (if present) will melt
-    # F_ia_net_before_snow
 
+    # F_io_net
     # net upward conductive heat flux
     # through sea ice and snow realized at the sea ice/snow surface
-    # F_io_net
 
-    # heat flux from atmosphere to ocean (+ = upward)
     # F_ao
+    # heat flux from atmosphere to ocean (+ = upward)
 
-    # heat flux from ocean to the ice (change of mixed layer temperature) (+ = upward)
     # F_oi
+    # heat flux from ocean to the ice (change of mixed layer temperature) (+ = upward)
 
-    # freshwater flux due to sublimation [kg/m2] (+ = upward)
     # FWsublim
+    # freshwater flux due to sublimation [kg/m2] (+ = upward)
 
     # initialize three dimensional arrays accounting for the thickness categories of the ice
     # (using * 1 ensures that a new array is created for each variable. otherwise they would
