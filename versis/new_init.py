@@ -10,7 +10,7 @@ olx = 2
 oly = 2
 nITC = 1
 
-dimensions = dict(x=nx+2*olx, y=ny+2*oly, z=nITC)
+dimensions = dict(xt=nx+2*olx, yt=ny+2*oly, zt=nITC)
 
 state = VerosState(VARIABLES, SETTINGS, dimensions)
 state.initialize_variables()
