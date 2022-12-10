@@ -27,7 +27,7 @@ def surface_forcing(state):
 
     # calculate wind speed and set lower boundary
     windSpeed_sq = urel**2 + vrel**2
-    windSpeed = npx.where(windSpeed_sq < wSpeedMin**2, wSpeedMin, npx.sqrt(windSpeed))
+    windSpeed = npx.where(windSpeed_sq < wSpeedMin**2, wSpeedMin, npx.sqrt(windSpeed_sq))
 
     # calculate air-ice drag coefficient
     CDAir = npx.where(vs.fCori < 0, airIceDrag_south, airIceDrag) * rhoAir * windSpeed
