@@ -76,7 +76,7 @@ def calc_growth(state):
     # therefore the regularization
 
     isIce = (hIceMeanpreTH > 0)
-    regArea =  npx.sqrt(AreapreTH**2 + area_reg_sq)
+    regArea =  npx.sqrt(AreapreTH**2 + Area_reg_sq)
     recip_regArea = 1 / regArea
 
     hIceActual = npx.where(isIce, hIceMeanpreTH * recip_regArea, 0)
@@ -126,7 +126,7 @@ def calc_growth(state):
         hSnowActual_mult = update(hSnowActual_mult, at[:,:,l], hSnowActual * pFac)
 
     # calculate freezing temperature
-    TempFrz = tempFrz0 + dTempFrz_dS * vs.ocSalt + celsius2K
+    TempFrz = tempFrz + dTempFrz_dS * vs.ocSalt + celsius2K
 
     # calculate heat fluxes through the ice/ snow and surface temperature
 
@@ -277,7 +277,7 @@ def calc_growth(state):
 
     tmpscal0 = 0.4
     tmpscal1 = 7 / tmpscal0
-    tmpscal2 = stantonNr * uStarBase * rhoSea * heatCapacity
+    tmpscal2 = stantonNr * uStarBase * rhoSea * cpWater
 
     # the ocean temperature cannot be lower than the freezing temperature
     surf_theta = npx.maximum(vs.theta, TempFrz)
@@ -394,8 +394,8 @@ def calc_growth(state):
     # of sea ice, then assume the sea ice is completely fresh
     # (if the water is fresh, no salty sea ice can form)
     FreshwaterContribFromIce = - hIceMeanChange * rhoIce2rhoFresh * \
-                npx.where(((vs.ocSalt > 0) & (vs.ocSalt > saltIce)),
-                            (1 - saltIce/vs.ocSalt), 1)
+                npx.where(((vs.ocSalt > 0) & (vs.ocSalt > saltIce_ref)),
+                            (1 - saltIce_ref/vs.ocSalt), 1)
 
     # the variables os_hIceMean and os_hSnowMean are negative ice and snow thicknesses
     # that were calculated in the advection routine. the thicknesses were cut off at zero but
@@ -403,7 +403,7 @@ def calc_growth(state):
 
     # salt flux into the ocean due to ice formation [g/s m2]
     # this is an actual salt flux 
-    tmpscal0 = npx.minimum(saltIce, vs.ocSalt)
+    tmpscal0 = npx.minimum(saltIce_ref, vs.ocSalt)
     saltflux = (hIceMeanChange + vs.os_hIceMean) * tmpscal0 \
         * vs.iceMask * rhoIce * sett.recip_deltatTherm
 
@@ -423,7 +423,7 @@ def calc_growth(state):
             * sett.recip_deltatTherm
 
     # convert freshwater flux to salt flux and combine virtual and actual salt flux
-    forc_salt_surface = EmPmR *  oc_ref_salt / rhoFresh + saltflux
+    forc_salt_surface = EmPmR *  saltOcn_ref / rhoFresh + saltflux
 
     # sea ice + snow load on the sea surface
     SeaIceLoad = hIceMean * rhoIce + hSnowMean * rhoSnow

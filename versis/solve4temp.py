@@ -24,9 +24,9 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
     cc2 = cc0 * bb2
     
     # sensible heat constant
-    d1 = seaice_dalton * cpAir * rhoAir
+    d1 = dalton * cpAir * rhoAir
     # latent heat constant
-    d1i = seaice_dalton * lhSublim * rhoAir
+    d1i = dalton * lhSublim * rhoAir
 
     # melting temperature of ice
     Tmelt = celsius2K
@@ -41,7 +41,7 @@ def solve4temp(state, hIceActual, hSnowActual, TSurfIn, TempFrz):
     ATempLoc = npx.maximum(celsius2K + minTAir, vs.ATemp)
 
     # set wind speed with lower boundary
-    ug = npx.maximum(eps, vs.wSpeed)
+    ug = npx.maximum(wSpeedMin, vs.wSpeed)
 
 
     ##### determine forcing term in heat budget #####

@@ -2,7 +2,7 @@ from veros.core.operators import numpy as npx
 from veros.core.operators import update, at
 from veros import veros_kernel, KernelOutput, veros_routine
 
-from versis.parameters import si_eps, celsius2K, area_floor
+from versis.parameters import hIce_min, celsius2K, area_floor
 
 
 @veros_kernel
@@ -24,7 +24,7 @@ def clean_up_advection(state):
 
     # case 2: very thin ice
     # set thicknesses to zero if the ice thickness is very small
-    thinIce = (hIceMean <= si_eps)
+    thinIce = (hIceMean <= hIce_min)
     hIceMean *= ~thinIce
     hSnowMean *= ~thinIce
     TSurf = npx.where(thinIce, celsius2K, vs.TSurf)

@@ -60,15 +60,15 @@ hCut = 0.15 # cut off snow thickness (for h >= hCut the snow is shortwave opaque
 
 shortwave = 0.3 # ice penetration by shortwave radiation factor
 
-heatCapacity = 3986.0   # heat capacity of water [J/kgK]
+cpWater = 3986.0   # heat capacity of water [J/kgK]
 
-tempFrz0 = -1.96    # freezing temperature [°C]
+tempFrz = -1.96    # freezing temperature [°C]
 dTempFrz_dS = 0     # derivative of freezing temperature w.r.t. salinity
-# tempFrz0 = 0.0901
+# tempFrz = 0.0901
 # dTempFrz_dS = -0.0575
 
-saltIce = 0         # reference salinity of sea ice
-oc_ref_salt = 34.7  # reference salinity of the ocean
+saltIce_ref = 0         # reference salinity of sea ice
+saltOcn_ref = 34.7  # reference salinity of the ocean
 
 # boundaries for longwave radiation and temperature
 minLWdown = 60  # minimum downward longwave radiation
@@ -76,12 +76,12 @@ maxTIce = 30    # maximum ice temperature
 minTIce = -50   # minimum ice temperature
 minTAir = -50   # minimum air temperature
 
-seaice_dalton = 0.00175 # dalton number/ sensible and latent heat transfer coefficient
+dalton = 0.00175 # dalton number/ sensible and latent heat transfer coefficient
 
 # regularization values for area and ice thickness
-area_reg = 0.15
+Area_reg = 0.15
 hice_reg = 0.10
-area_reg_sq = area_reg**2
+Area_reg_sq = Area_reg**2
 hice_reg_sq = hice_reg**2
 
 celsius2K = 273.15 # conversion from [K] to [°C]
@@ -106,11 +106,10 @@ sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
 cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 
 # minimum wind speed [m/s]
-eps = 1e-10
-eps_sq = eps**2
+wSpeedMin = 1e-10
 
-si_eps = 1e-5       # 'minimum' ice thickness [m] (smaller ice thicknesses are set to zero)
-area_floor = si_eps # minimum ice cover fraction if ice is present
+hIce_min = 1e-5       # 'minimum' ice thickness [m] (smaller ice thicknesses are set to zero)
+area_floor = hIce_min # minimum ice cover fraction if ice is present
 
 # drag coefficients
 airIceDrag = 0.0012         # air-ice drag coefficient
