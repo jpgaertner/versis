@@ -47,4 +47,4 @@ def model(state):
     update_Growth(state)
 
     # copy local variables onto veros
-    # copy_output(state)
+    copy_output(state)
