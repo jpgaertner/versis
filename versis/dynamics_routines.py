@@ -1,8 +1,6 @@
 from veros.core.operators import numpy as npx
 from veros import veros_kernel, KernelOutput, veros_routine
 
-from versis.parameters import *
-
 
 @veros_kernel
 def calc_IceStrength(state):
@@ -12,8 +10,9 @@ def calc_IceStrength(state):
     '''
 
     vs = state.variables
+    sett = state.settings
 
-    SeaIceStrength = pStar * vs.hIceMean * npx.exp(-cStar * (1 - vs.Area)) * vs.iceMask
+    SeaIceStrength = sett.pStar * vs.hIceMean * npx.exp(-sett.cStar * (1 - vs.Area)) * vs.iceMask
     return KernelOutput(SeaIceStrength = SeaIceStrength)
 
 @veros_routine
@@ -33,9 +32,10 @@ def ocean_drag_coeffs(state,uIce,vIce):
     '''
 
     vs = state.variables
+    sett = state.settings
 
     # get ice-water drag coefficient times density
-    dragCoeff = npx.where(vs.fCori < 0, waterIceDrag_south, waterIceDrag) * rhoSea
+    dragCoeff = npx.where(vs.fCori < 0, sett.waterIceDrag_south, sett.waterIceDrag) * sett.rhoSea
 
     # calculate component-wise velocity differences at velocity points
     du = (uIce - vs.uOcean) * vs.maskInU
@@ -46,8 +46,8 @@ def ocean_drag_coeffs(state,uIce,vIce):
                     +  (dv + npx.roll(dv,-1,1))**2 )
 
     # calculate linear drag coefficient and apply mask
-    cDrag = npx.where(dragCoeff**2 * tmpVar > cDragMin**2,
-                        dragCoeff * npx.sqrt(tmpVar), cDragMin)
+    cDrag = npx.where(dragCoeff**2 * tmpVar > sett.cDragMin**2,
+                        dragCoeff * npx.sqrt(tmpVar), sett.cDragMin)
     cDrag = cDrag * vs.iceMask
 
     return cDrag
@@ -61,6 +61,7 @@ def basal_drag_coeffs(state, uIce, vIce):
     '''
 
     vs = state.variables
+    sett = state.settings
 
     # absolute value of the ice velocity at c-points
     tmpFld = 0.25 * ( (uIce * vs.maskInU)**2
@@ -69,10 +70,10 @@ def basal_drag_coeffs(state, uIce, vIce):
                     + npx.roll(vIce * vs.maskInV,-1,1)**2 )
 
     # include velocity parameter U0 to avoid singularities
-    tmpFld = basalDragK2 / npx.sqrt(tmpFld + basalDragU0**2)
+    tmpFld = sett.basalDragK2 / npx.sqrt(tmpFld + sett.basalDragU0**2)
 
     # critical ice height that allows for the formation of landfast ice
-    hCrit = npx.abs(vs.R_low) * vs.Area / basalDragK1
+    hCrit = npx.abs(vs.R_low) * vs.Area / sett.basalDragK1
 
     # soft maximum for better differentiability:
     # max(a,b;k) = ln(exp(k*a)+exp(k*b))/k
@@ -85,7 +86,7 @@ def basal_drag_coeffs(state, uIce, vIce):
     cBot = npx.where(vs.Area > 0.01,
             tmpFld
                 * npx.log(npx.exp(fac * (vs.hIceMean-hCrit)) + 1.)
-                * recip_fac * npx.exp(-cBasalStar * (1. - vs.Area)),
+                * recip_fac * npx.exp(-sett.cBasalStar * (1. - vs.Area)),
                 0.)
 
     return cBot
@@ -166,8 +167,9 @@ def viscosities(state, e11,e22,e12):
     """
 
     vs = state.variables
+    sett = state.settings
 
-    recip_PlasDefCoeffSq = 1. / PlasDefCoeff**2
+    recip_PlasDefCoeffSq = 1. / sett.PlasDefCoeff**2
 
     # interpolate squares of e12 to c-points after weighting them with the
     # area centered around z-points
@@ -186,16 +188,16 @@ def viscosities(state, e11,e22,e12):
     # smooth regularization of delta for better differentiability
     # deltaCreg = deltaC + deltaMin
     # deltaCreg = npx.sqrt( deltaSq + deltaMin**2 )
-    deltaCreg = npx.maximum(deltaC,deltaMin)
+    deltaCreg = npx.maximum(deltaC,sett.deltaMin)
 
     # calculate viscosities
-    zeta = 0.5 * ( vs.SeaIceStrength * (1 + tensileStrFac) ) / deltaCreg
+    zeta = 0.5 * ( vs.SeaIceStrength * (1 + sett.tensileStrFac) ) / deltaCreg
     eta  = zeta * recip_PlasDefCoeffSq
 
     # calculate ice pressure
-    press = 0.5 * ( vs.SeaIceStrength * (1 - pressReplFac)
-              + 2. * zeta * deltaC * pressReplFac / (1 + tensileStrFac)
-             ) * (1 - tensileStrFac)
+    press = 0.5 * ( vs.SeaIceStrength * (1 - sett.pressReplFac)
+              + 2. * zeta * deltaC * sett.pressReplFac / (1 + sett.tensileStrFac)
+             ) * (1 - sett.tensileStrFac)
 
     return zeta, eta, press
 

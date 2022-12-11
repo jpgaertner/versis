@@ -1,8 +1,6 @@
 from veros.core.operators import numpy as npx
 from veros import veros_kernel
 
-from versis.parameters import rhoIce, rhoSea, waterIceDrag, waterIceDrag_south
-
 
 @veros_kernel
 def freedrift_solver(state):
@@ -10,6 +8,7 @@ def freedrift_solver(state):
     '''calculate ice velocities without taking into account internal ice stress'''
 
     vs = state.variables
+    sett = state.settings
 
     # air-ice stress at c-point
     tauXIceCenter = 0.5 * (vs.WindForcingX \
@@ -18,7 +17,7 @@ def freedrift_solver(state):
                 + npx.roll(vs.WindForcingY,-1,1))
 
     # mass of ice per unit area times coriolis factor
-    mIceCor = rhoIce * vs.hIceMean * vs.fCori
+    mIceCor = sett.rhoIce * vs.hIceMean * vs.fCori
 
     # ocean surface velocity at c-points
     uOceanCenter = 0.5 * (vs.uOcean + npx.roll(vs.uOcean,-1,0))
@@ -36,7 +35,7 @@ def freedrift_solver(state):
 
     # solve for norm
     south = (vs.fCori < 0)
-    tmp1 = 1 / (npx.where(south, waterIceDrag_south, waterIceDrag) * rhoSea)
+    tmp1 = 1 / (npx.where(south, sett.waterIceDrag_south, sett.waterIceDrag) * sett.rhoSea)
     tmp2 = tmp1**2 * mIceCor**2
     tmp3 = tmp1**2 * rhsN**2
     tmp4 = tmp2**2 + 4 * tmp3

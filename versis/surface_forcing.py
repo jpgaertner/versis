@@ -1,9 +1,6 @@
 from veros.core.operators import numpy as npx
 from veros import veros_kernel
 
-from versis.parameters import wSpeedMin, airTurnAngle, \
-        rhoAir, airIceDrag, airIceDrag_south
-
 
 @veros_kernel
 def surface_forcing(state):
@@ -11,10 +8,11 @@ def surface_forcing(state):
     '''calculate surface stress from wind and ice velocities'''
 
     vs = state.variables
+    sett = state.settings
 
     # use turning angle (default is zero)
-    sinWin = npx.sin(npx.deg2rad(airTurnAngle))
-    cosWin = npx.cos(npx.deg2rad(airTurnAngle))
+    sinWin = npx.sin(npx.deg2rad(sett.airTurnAngle))
+    cosWin = npx.cos(npx.deg2rad(sett.airTurnAngle))
 
     ##### set up forcing fields #####
 
@@ -27,10 +25,10 @@ def surface_forcing(state):
 
     # calculate wind speed and set lower boundary
     windSpeed_sq = urel**2 + vrel**2
-    windSpeed = npx.where(windSpeed_sq < wSpeedMin**2, wSpeedMin, npx.sqrt(windSpeed_sq))
+    windSpeed = npx.where(windSpeed_sq < sett.wSpeedMin**2, sett.wSpeedMin, npx.sqrt(windSpeed_sq))
 
     # calculate air-ice drag coefficient
-    CDAir = npx.where(vs.fCori < 0, airIceDrag_south, airIceDrag) * rhoAir * windSpeed
+    CDAir = npx.where(vs.fCori < 0, sett.airIceDrag_south, sett.airIceDrag) * sett.rhoAir * windSpeed
     
     # calculate surface stress
     tauX = CDAir * ( cosWin * urel - npx.sign(vs.fCori) * sinWin * vrel )

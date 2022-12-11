@@ -1,7 +1,6 @@
 from veros.core.operators import numpy as npx
 from veros import veros_routine, veros_kernel, KernelOutput
 
-from versis.parameters import recip_rhoSea, gravity, seaIceLoadFac
 from versis.freedrift_solver import freedrift_solver
 from versis.evp_solver import evp_solver
 from versis.surface_forcing import surface_forcing
@@ -13,6 +12,7 @@ def calc_SurfaceForcing(state):
     '''calculate surface forcing due to wind and ocean surface tilt'''
 
     vs = state.variables
+    sett = state.settings
 
     # calculate surface stresses from wind and ice velocities
     tauX, tauY = surface_forcing(state)
@@ -23,11 +23,12 @@ def calc_SurfaceForcing(state):
 
     # calculate geopotential anomaly. the surface pressure and sea ice load are
     # used as they affect the sea surface height anomaly
-    phiSurf = gravity * vs.ssh_an
+    phiSurf = sett.gravity * vs.ssh_an
     if state.settings.useRealFreshWaterFlux:
-        phiSurf = phiSurf + (vs.surfPress + vs.SeaIceLoad * gravity * seaIceLoadFac) * recip_rhoSea
+        phiSurf = phiSurf + (vs.surfPress + vs.SeaIceLoad * sett.gravity * sett.seaIceLoadFac) \
+                 * sett.recip_rhoSea
     else:
-        phiSurf = phiSurf + vs.surfPress * recip_rhoSea
+        phiSurf = phiSurf + vs.surfPress * sett.recip_rhoSea
 
     # add in tilt
     WindForcingX = WindForcingX - vs.SeaIceMassU \

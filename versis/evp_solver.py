@@ -2,7 +2,6 @@ from veros.core.operators import numpy as npx
 from veros.core.operators import update, at, for_loop
 from veros import veros_kernel
 
-from versis.parameters import *
 from versis.dynamics_routines import strainrates, viscosities, \
         ocean_drag_coeffs, basal_drag_coeffs, stressdiv, stress
 from versis.global_sum import global_sum
@@ -105,14 +104,14 @@ def evp_solver_body(iEVP, arg_body):
 
     # calculate forcing from wind and ocean stress at velocity points
     ForcingX = vs.WindForcingX + (
-        0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * vs.uOcean
-        - npx.sign(vs.fCori) * sinWat * 0.5 * (
+        0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * sett.cosWat * vs.uOcean
+        - npx.sign(vs.fCori) * sett.sinWat * 0.5 * (
             cDrag * dvAtC + npx.roll(cDrag * dvAtC,1,0)
         ) * locMaskU
     ) * vs.AreaW
     ForcingY = vs.WindForcingY + (
-        0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat * vs.vOcean
-        + npx.sign(vs.fCori) * sinWat * 0.5 * (
+        0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * sett.cosWat * vs.vOcean
+        + npx.sign(vs.fCori) * sett.sinWat * 0.5 * (
             cDrag * duAtC  + npx.roll(cDrag * duAtC,1,1)
         ) * locMaskV
     ) * vs.AreaS
@@ -131,10 +130,10 @@ def evp_solver_body(iEVP, arg_body):
     # calculate ice-water drag coefficient at velocity points
     rMassU = 1./npx.where(vs.SeaIceMassU==0,npx.inf,vs.SeaIceMassU)
     rMassV = 1./npx.where(vs.SeaIceMassV==0,npx.inf,vs.SeaIceMassV)
-    dragU = 0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * cosWat * vs.AreaW \
-          + 0.5 * ( cBotC + npx.roll(cBotC,1,0) )          * vs.AreaW
-    dragV = 0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * cosWat * vs.AreaS \
-          + 0.5 * ( cBotC + npx.roll(cBotC,1,1) )          * vs.AreaS
+    dragU = 0.5 * ( cDrag + npx.roll(cDrag,1,0) ) * sett.cosWat * vs.AreaW \
+          + 0.5 * ( cBotC + npx.roll(cBotC,1,0) )               * vs.AreaW
+    dragV = 0.5 * ( cDrag + npx.roll(cDrag,1,1) ) * sett.cosWat * vs.AreaS \
+          + 0.5 * ( cBotC + npx.roll(cBotC,1,1) )               * vs.AreaS
 
     # step momentum equations with ice-ocean stress treated ...
     if explicitDrag:

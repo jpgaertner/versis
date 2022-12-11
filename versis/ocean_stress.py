@@ -1,7 +1,6 @@
 from veros.core.operators import numpy as npx
 from veros import veros_kernel, veros_routine, KernelOutput
 
-from versis.parameters import waterTurnAngle
 from versis.fill_overlap import fill_overlap_uv
 from versis.dynamics_routines import ocean_drag_coeffs
 
@@ -12,13 +11,14 @@ def calc_OceanStress(state):
     '''calculate stresses on ocean surface from ocean and ice velocities'''
 
     vs = state.variables
+    sett = state.settings
 
     # get linear drag coefficient at c-point
     cDrag = ocean_drag_coeffs(state, vs.uIce, vs.vIce)
 
     # use turning angle (default is zero)
-    sinWat = npx.sin(npx.deg2rad(waterTurnAngle))
-    cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
+    sinWat = npx.sin(npx.deg2rad(sett.waterTurnAngle))
+    cosWat = npx.cos(npx.deg2rad(sett.waterTurnAngle))
 
     # calculate component-wise velocity difference of ice and ocean surface
     du = vs.uIce - vs.uOcean

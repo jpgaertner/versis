@@ -2,7 +2,6 @@ from veros.core.operators import numpy as npx
 from veros.core.operators import update, at
 from veros import veros_kernel
 
-from versis.parameters import CrMax
 from versis.fill_overlap import fill_overlap
 
 
@@ -33,8 +32,8 @@ def calc_ZonalFlux(state, field, uTrans):
     Rjm = (field[1:-2,:] - field[:-3,:]) * maskLocW[1:-2,:]
 
     Cr = npx.where(uTrans[2:-1,:] > 0, Rjm, Rjp)
-    Cr = npx.where(npx.abs(Rj) * CrMax > npx.abs(Cr),
-                        Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
+    Cr = npx.where(npx.abs(Rj) * sett.CrMax > npx.abs(Cr),
+                        Cr / Rj, npx.sign(Cr) * sett.CrMax * npx.sign(Rj))
     Cr = limiter(Cr)
 
     # zonal advective flux for the given field
@@ -66,8 +65,8 @@ def calc_MeridionalFlux(state, field, vTrans):
     Rjm = (field[:,1:-2] - field[:,:-3]) * maskLocS[:,1:-2]
 
     Cr = npx.where(vTrans[:,2:-1] > 0, Rjm, Rjp)
-    Cr = npx.where(npx.abs(Rj) * CrMax > npx.abs(Cr),
-                    Cr / Rj, npx.sign(Cr) * CrMax * npx.sign(Rj))
+    Cr = npx.where(npx.abs(Rj) * sett.CrMax > npx.abs(Cr),
+                    Cr / Rj, npx.sign(Cr) * sett.CrMax * npx.sign(Rj))
     Cr = limiter(Cr)
 
     # meridional advective flux for the given field

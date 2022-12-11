@@ -1,8 +1,6 @@
 from veros.core.operators import numpy as npx
 from veros import veros_routine, veros_kernel, KernelOutput
 
-from versis.parameters import rhoIce, rhoSnow
-
 
 @veros_kernel
 def calc_AreaWS(state):
@@ -30,9 +28,10 @@ def calc_SeaIceMass(state):
     '''calculate mass of the ice-snow system centered around c-, u-, and v-points'''
 
     vs = state.variables
+    sett = state.settings
 
-    SeaIceMassC = rhoIce * vs.hIceMean \
-                + rhoSnow * vs.hSnowMean
+    SeaIceMassC = sett.rhoIce * vs.hIceMean \
+                + sett.rhoSnow * vs.hSnowMean
     SeaIceMassU = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,0) )
     SeaIceMassV = 0.5 * ( SeaIceMassC + npx.roll(SeaIceMassC,1,1) )
 
