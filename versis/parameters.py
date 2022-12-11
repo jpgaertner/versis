@@ -109,7 +109,7 @@ cosWat = npx.cos(npx.deg2rad(waterTurnAngle))
 wSpeedMin = 1e-10
 
 hIce_min = 1e-5       # 'minimum' ice thickness [m] (smaller ice thicknesses are set to zero)
-area_floor = hIce_min # minimum ice cover fraction if ice is present
+Area_min = hIce_min # minimum ice cover fraction if ice is present
 
 # drag coefficients
 airIceDrag = 0.0012         # air-ice drag coefficient
