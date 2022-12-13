@@ -420,7 +420,7 @@ def calc_growth(state):
                         TSurf = TSurf,
                         saltflux = saltflux,
                         EmPmR = EmPmR,
-                        # forc_salt_surface = forc_salt_surface,
+                        forc_salt_surface = forc_salt_surface,
                         Qsw = Qsw,
                         Qnet = Qnet,
                         SeaIceLoad = SeaIceLoad,
