@@ -39,9 +39,6 @@ def calc_growth(state):
     # net upward conductive heat flux
     # through sea ice and snow realized at the sea ice/snow surface
 
-    # F_ao
-    # heat flux from atmosphere to ocean (+ = upward)
-
     # F_oi
     # heat flux from ocean to the ice (change of mixed layer temperature) (+ = upward)
 
@@ -96,9 +93,8 @@ def calc_growth(state):
     ##### retrieve the air-sea heat and shortwave radiative fluxes and #####
     #####   calculate the corresponding ice growth rate for open water #####
 
-    # set shortwave flux in (qswo) and total flux out (F_ao) of the ocean
+    # set shortwave flux in (qswo) and total flux out (vs.Qnet) of the ocean
     # (Qnet and Qsw are both defined as + = upwards)
-    F_ao = vs.Qnet #TODO use the variables directly
     qswo = vs.Qsw
 
     # the fraction of shortwave radiation that is absorbed in the ocean surface layer
@@ -110,7 +106,7 @@ def calc_growth(state):
     qswo_in_first_layer = qswo * (1 - swFracAbsTopOcean)
 
     # ice growth in open water due to heat loss to atmosphere
-    IceGrowthRateOpenWater = qi * (F_ao - qswo + qswo_in_first_layer)
+    IceGrowthRateOpenWater = qi * (vs.Qnet - qswo + qswo_in_first_layer)
 
 
     ##### calculate surface temperature and heat fluxes ##### 
@@ -376,7 +372,7 @@ def calc_growth(state):
 
     # the net energy flux out of the ocean [J/m2]
     NetEnergyFluxOutOfOcean = (AreapreTH * (F_ia_net + F_io_net + IcePenetSW)
-                + (1 - AreapreTH) * F_ao) * sett.deltatTherm
+                + (1 - AreapreTH) * vs.Qnet) * sett.deltatTherm
 
     # energy taken out of the ocean which is not used for sea ice growth [J].
     # If the net energy flux out of the ocean is balanced by the latent
