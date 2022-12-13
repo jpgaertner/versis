@@ -90,25 +90,6 @@ def calc_growth(state):
     hIceActual = npx.maximum(hIceActual, 0.05)
 
 
-    ##### retrieve the air-sea heat and shortwave radiative fluxes and #####
-    #####   calculate the corresponding ice growth rate for open water #####
-
-    # set shortwave flux in (qswo) and total flux out (vs.Qnet) of the ocean
-    # (Qnet and Qsw are both defined as + = upwards)
-    qswo = vs.Qsw
-
-    # the fraction of shortwave radiation that is absorbed in the ocean surface layer
-    # TODO get this from veros
-    swFracAbsTopOcean = 0
-
-    # maybe as output for the ocean model
-    # qswo_below_first_layer = qswo * swFracPassTopOcean
-    qswo_in_first_layer = qswo * (1 - swFracAbsTopOcean)
-
-    # ice growth in open water due to heat loss to atmosphere
-    IceGrowthRateOpenWater = qi * (vs.Qnet - qswo + qswo_in_first_layer)
-
-
     ##### calculate surface temperature and heat fluxes ##### 
 
     TIce_mult = ones3d * 1
@@ -289,6 +270,11 @@ def calc_growth(state):
     IceGrowthRateMixedLayer = F_oi * qi
 
 
+    ##### calculate the ice growth in open water due to heat loss to atmosphere #####
+    
+    IceGrowthRateOpenWater = qi * vs.Qnet
+
+
     ##### calculate change in ice, snow thicknesses and area #####
 
     # calculate thickness derivatives of ice and snow
@@ -358,7 +344,7 @@ def calc_growth(state):
     ##### calculate output to ocean #####
 
     # effective shortwave heating rate
-    Qsw = IcePenetSW * AreapreTH + qswo * (1 - AreapreTH)
+    Qsw = IcePenetSW * AreapreTH + vs.Qsw * (1 - AreapreTH)
 
     # the actual ice volume change over the time step [m3/m2]
     hIceMeanChange = hIceMean - hIceMeanpreTH
