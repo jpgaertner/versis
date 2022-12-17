@@ -6,7 +6,7 @@ from versis.solve4temp import solve4temp
 
 
 @veros_kernel
-def calc_growth(state):
+def calc_growth(state, vs_forc):
 
     '''calculate thermodynamic change of ice and snow thickness and ice cover fraction
     due to atmospheric and ocean surface forcing'''
