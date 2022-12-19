@@ -14,6 +14,12 @@ def calc_growth(state, vs_forc):
     vs = state.variables
     sett = state.settings
 
+    # copy veros variables
+    vs.theta = vs.temp[:,:,-1,vs.tau] + sett.celsius2K
+    vs.ocSalt = vs.salt[:,:,-1,vs.tau]
+    vs.Qnet = - vs_forc.forc_temp_surface * sett.cpWater * sett.rhoSea
+    vs.Qsw = - vs_forc.SWdown
+
     if sett.growthTesting:
         sett.rhoIce = 910
         sett.rhoFresh = 999.8
@@ -115,7 +121,7 @@ def calc_growth(state, vs_forc):
                 npx.mean(TIce_mult), npx.mean(TempFrz))
 
     for l in range(sett.nITC):
-        output = solve4temp(state, hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l],
+        output = solve4temp(state, vs_forc, hIceActual_mult[:,:,l], hSnowActual_mult[:,:,l],
             TIce_mult[:,:,l], TempFrz)
 
         TIce_mult = update(TIce_mult, at[:,:,l], output[0])
@@ -145,19 +151,19 @@ def calc_growth(state, vs_forc):
 
     # snow accumulation rate over ice [m/s]
     # the snowfall is given in water equivalent, therefore it also needs to be muliplied with rhoFresh2rhoSnow
-    SnowAccRateOverIce = vs.snowfall
+    SnowAccRateOverIce = vs_forc.snowfall
     if sett.growthTesting:
-        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce + vs.precip * sett.rhoFresh2rhoSnow,
+        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce + vs_forc.precip * sett.rhoFresh2rhoSnow,
                                 SnowAccRateOverIce)
     else:
-        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce + vs.precip,
+        SnowAccRateOverIce = npx.where(tmp, SnowAccRateOverIce + vs_forc.precip,
                                 SnowAccRateOverIce) * sett.rhoFresh2rhoSnow
 
     # the precipitation rate over the ice which goes immediately into the
     # ocean (flowing through cracks in the ice). if the temperature is
     # above the freezing point, the precipitation remains wet and runs
     # into the ocean
-    PrecipRateOverIceSurfaceToSea = npx.where(tmp, 0, vs.precip)
+    PrecipRateOverIceSurfaceToSea = npx.where(tmp, 0, vs_forc.precip)
 
     # total snow accumulation over ice [m]
     SnowAccOverIce = SnowAccRateOverIce * AreapreTH * sett.deltatTherm
@@ -400,7 +406,7 @@ def calc_growth(state, vs_forc):
     # with the ocean surface salinity). if there is a flux of freshwater into the ocean, the salinity has
     # to decrease. but as the ocean model treats the water volume as constant, the adding of freshwater is
     # treated as salt flux out of the ocean
-    EmPmR = vs.iceMask *  ((-vs.evap - vs.precip) * (1 - AreapreTH) \
+    EmPmR = vs.iceMask *  ((- vs_forc.evap - vs_forc.precip) * (1 - AreapreTH) \
         - PrecipRateOverIceSurfaceToSea * AreapreTH - vs.runoff - (
         FreshwaterContribFromIce + FreshwaterContribFromSnowMelt) \
             / sett.deltatTherm) * sett.rhoFresh + vs.iceMask * (
@@ -413,26 +419,21 @@ def calc_growth(state, vs_forc):
     # sea ice + snow load on the sea surface
     SeaIceLoad = hIceMean * sett.rhoIce + hSnowMean * sett.rhoSnow
 
+    return hIceMean, hSnowMean, Area, TSurf, saltflux, EmPmR, forc_salt_surface, Qsw, Qnet, \
+        SeaIceLoad, IcePenetSW
 
-    return KernelOutput(hIceMean = hIceMean,
-                        hSnowMean = hSnowMean,
-                        Area = Area,
-                        TSurf = TSurf,
-                        saltflux = saltflux,
-                        EmPmR = EmPmR,
-                        forc_salt_surface = forc_salt_surface,
-                        Qsw = Qsw,
-                        Qnet = Qnet,
-                        SeaIceLoad = SeaIceLoad,
-                        IcePenetSW = IcePenetSW,
-                        #TODO remove this after debugging
-                        F_lh = F_lh, F_lwu = F_lwu, F_sens = F_sens, q_s = q_s,
-                        F_ia_net = F_ia_net, F_io_net = F_io_net, F_oi = F_oi,
-                        IceGrowthRateMixedLayer=IceGrowthRateMixedLayer,
-                        dhIceMean_dt=dhIceMean_dt,dArea_dt=dArea_dt,
-                        dArea_oiFlux=dArea_oiFlux,dArea_iaFlux=dArea_iaFlux,dArea_oaFlux=dArea_oaFlux,
-                        IceGrowthRateOpenWater=IceGrowthRateOpenWater,NetExistingIceGrowthRate=NetExistingIceGrowthRate,
-                        surf_theta=surf_theta,TempFrz=TempFrz)
+    # return KernelOutput(hIceMean = hIceMean,
+    #                     hSnowMean = hSnowMean,
+    #                     Area = Area,
+    #                     TSurf = TSurf,
+    #                     saltflux = saltflux,
+    #                     EmPmR = EmPmR,
+    #                     forc_salt_surface = forc_salt_surface,
+    #                     Qsw = Qsw,
+    #                     Qnet = Qnet,
+    #                     SeaIceLoad = SeaIceLoad,
+    #                     IcePenetSW = IcePenetSW,
+    #                     )
 
 @veros_routine
 def update_Growth(state):
