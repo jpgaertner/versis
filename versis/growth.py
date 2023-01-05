@@ -14,16 +14,13 @@ def calc_growth(state, vs_forc):
     vs = state.variables
     sett = state.settings
 
-    # copy veros variables
-    vs.theta = vs.temp[:,:,-1,vs.tau] + sett.celsius2K
-    vs.ocSalt = vs.salt[:,:,-1,vs.tau]
-    vs.Qnet = - vs_forc.forc_temp_surface * sett.cpWater * sett.rhoSea
-    vs.Qsw = - vs_forc.SWdown
+    if not sett.growthTesting:
+        # copy veros variables
+        vs.theta = vs.temp[:,:,-1,vs.tau] + sett.celsius2K
+        vs.ocSalt = vs.salt[:,:,-1,vs.tau]
+        vs.Qnet = - vs_forc.forc_temp_surface * sett.cpWater * sett.rhoSea
+        vs.Qsw = - vs_forc.SWdown
 
-    if sett.growthTesting:
-        sett.rhoIce = 910
-        sett.rhoFresh = 999.8
-        sett.rhoSea = 1027
 
     ##### constants and initializations #####
 
@@ -372,10 +369,7 @@ def calc_growth(state, vs_forc):
     ResidualEnergyOutOfOcean = NetEnergyFluxOutOfOcean - EnergyInNewTotalIceVolume
 
     # total heat flux out of the ocean [W/m2]
-    if sett.growthTesting:
-        Qnet = vs.Qnet
-    else:
-        Qnet = ResidualEnergyOutOfOcean * sett.recip_deltatTherm
+    Qnet = ResidualEnergyOutOfOcean * sett.recip_deltatTherm
 
     # the freshwater contribution to (from) the ocean due to melting (growing)
     # of ice [m3/m2] (positive for melting)
@@ -413,6 +407,14 @@ def calc_growth(state, vs_forc):
         vs.os_hIceMean * sett.rhoIce + vs.os_hSnowMean * sett.rhoSnow) \
             * sett.recip_deltatTherm
 
+    # EmPmR = vs.iceMask * (
+    #         - ( FreshwaterContribFromIce + FreshwaterContribFromSnowMelt
+    #         ) * sett.recip_deltatTherm \
+    #         + vs.iceMask * (
+    #         vs.os_hIceMean * sett.rhoIce + vs.os_hSnowMean * sett.rhoSnow
+    #         ) * sett.recip_deltatTherm
+    #         )  
+
     # convert freshwater flux to salt flux and combine virtual and actual salt flux
     forc_salt_surface = EmPmR *  sett.saltOcn_ref / sett.rhoFresh + saltflux
 
@@ -432,8 +434,7 @@ def calc_growth(state, vs_forc):
     #                     Qsw = Qsw,
     #                     Qnet = Qnet,
     #                     SeaIceLoad = SeaIceLoad,
-    #                     IcePenetSW = IcePenetSW,
-    #                     )
+    #                     IcePenetSW = IcePenetSW)
 
 @veros_routine
 def update_Growth(state):
