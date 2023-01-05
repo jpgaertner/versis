@@ -10,8 +10,6 @@ def solve4temp(state, vs_forc, hIceActual, hSnowActual, TSurfIn, TempFrz):
     vs = state.variables
     sett = state.settings
 
-    if sett.growthTesting:
-        sett.rhoAir = 1.2
 
     ##### define local constants used for calculations #####
 
