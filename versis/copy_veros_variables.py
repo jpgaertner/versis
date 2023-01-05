@@ -11,16 +11,17 @@ def copy_input(state):
     # ocean surface velocity, temperature and salinity
     vs.uOcean = vs.u[:,:,-1,vs.tau]
     vs.vOcean = vs.v[:,:,-1,vs.tau]
-    vs.theta = vs.temp[:,:,-1,vs.tau] + celsius2K
-    vs.ocSalt = vs.salt[:,:,-1,vs.tau]
+    # vs.theta = vs.temp[:,:,-1,vs.tau] + celsius2K
+    # vs.ocSalt = vs.salt[:,:,-1,vs.tau]
 
     # ocean surface surface total and shortwave heat flux
-    vs.Qnet = - vs.forc_temp_surface * cpWater * rhoSea
-    vs.Qsw = - vs.SWdown
+    # vs.Qnet = - vs.forc_temp_surface * cpWater * rhoSea
+    # vs.Qsw = - vs.SWdown
 
     # sea surface height anomaly (dividing by the size of the uppermost grid cell
     # to get the right units)
-    vs.ssh_an = vs.psi[:,:,vs.tau] * vs.fCori / ( gravity * vs.dzw[-1] ) 
+    # TODO figure this out
+    # vs.ssh_an = vs.psi[:,:,vs.tau] * vs.fCori / ( gravity * vs.dzw[-1] )
 
 
 @veros_routine
@@ -33,7 +34,7 @@ def copy_output(state):
     # if it is executed at the beginning of the time step (before set_forcing_kernel).
 
     # set the surface heat flux to the heat flux that is reduced due to a potential ice cover
-    vs.forc_temp_surface = - vs.Qnet / ( cpWater * rhoSea )
+    # vs.forc_temp_surface = - vs.Qnet / ( cpWater * rhoSea )
 
     # all of the surface heat forcing for veros is contained in forc_temp_surface, therefore
     # no shortwave radiation has to be updated here
